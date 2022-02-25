@@ -11,13 +11,16 @@
 #include <pcl/point_cloud.h>
 #include <pcl/PCLPointCloud2.h>
 #include <pcl/point_types.h>
+#include <pcl/sample_consensus/method_types.h>
+#include <pcl/sample_consensus/model_types.h>
+#include <pcl/segmentation/sac_segmentation.h>
 
 std::queue<sensor_msgs::ImageConstPtr> rgb_image_buf;
 std::queue<sensor_msgs::ImageConstPtr> depth_image_buf;
 
-float fx = 384.58409758650083;
-float cx = 324.23845707433316;
-float cy = 235.9118314160069;
+float fx = 384.58409758650083;  // need rgb calib
+float cx = 324.23845707433316;  // need rgb calib
+float cy = 235.9118314160069; // need rgb calib
 
 void rgb_sub(const sensor_msgs::ImageConstPtr &rgb_image)
 {
@@ -87,6 +90,7 @@ int main(int argc, char **argv)
 
       if (first && !rgb_image.empty() && !depth_image.empty())
       {
+
         int c1 = 213;
         int r1 = 160;
         int c2 = 426;
@@ -97,6 +101,7 @@ int main(int argc, char **argv)
         pcl::PointXYZRGB point;
         for(int i = r1; i < r2; i++){
           for(int j = c1; j < c2; j++){
+            // RGB-D to PointCloud2
             point.z = depth_image.at<unsigned short>(i,j) / 1000.0;
             point.x = (static_cast<float>(j)-cx) * point.z  / fx;
             point.y = (static_cast<float>(i)-cy) * point.z / fx;
@@ -106,14 +111,33 @@ int main(int argc, char **argv)
             cloud.push_back(point);
 
             //std::cout << point.x << "  " << point.y << "  " << point.z << std::endl;
-
-
           }
         }
+
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr ptr_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+        *ptr_cloud = cloud;
+
+        pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
+        pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
+        // Create the segmentation object
+        pcl::SACSegmentation<pcl::PointXYZRGB> seg;
+        // Optional
+        seg.setOptimizeCoefficients (true);
+        // Mandatory
+        seg.setModelType (pcl::SACMODEL_PLANE);
+        seg.setMethodType (pcl::SAC_RANSAC);
+        seg.setDistanceThreshold (0.01);
+
+        seg.setInputCloud (ptr_cloud);
+        seg.segment (*inliers, *coefficients);
 
         pcl::toROSMsg(cloud, cloudmsg);
         cloudmsg.header.frame_id = "camera";
 
+        std::cerr << "Model coefficients: " << coefficients->values[0] << " "
+                                              << coefficients->values[1] << " "
+                                              << coefficients->values[2] << " "
+                                              << coefficients->values[3] << std::endl;
         //first = false;
         //ROS_INFO("Make Cloud");
       }
