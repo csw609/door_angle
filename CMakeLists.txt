@@ -43,3 +43,5 @@ target_link_libraries(door ${catkin_LIBRARIES} ${OpenCV_LIBS})
 add_executable(plane_seg src/plane_seg.cpp)
 target_link_libraries(plane_seg ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES})
 
+add_executable(fake_bounding src/fake_bounding.cpp)
+target_link_libraries(fake_bounding ${catkin_LIBRARIES})

@@ -114,22 +114,24 @@ int main(int argc, char **argv)
         rgb_image_buf.pop();
         depth_image = ptr_r->image.clone();
         depth_image_buf.pop();
-        box = bounding_buf.front()->bounding_boxes[0];
-        bounding_buf.pop();
+
       }
 
       if (first && !rgb_image.empty() && !depth_image.empty())
       { // future work!! => Consider bounding box probability
 
         // set bounding box area
+        box = bounding_buf.front()->bounding_boxes[0];
+        bounding_buf.pop();
         long c1 = box.xmin;
         long r1 = box.ymin;
-        long c2 = box.xmin;
+        long c2 = box.xmax;
         long r2 = box.ymax;
+
+        //std::cout << c1 << " " << c2 << " " << r1 << " " << r2 << " " << std::endl;
 
         //std::cout << depth_image.at<unsigned short>(r1,c1) << std::endl;
         //std::cout << depth_image.size() << std::endl;
-
         pcl::PointCloud<pcl::PointXYZRGB> cloud;
         pcl::PointXYZRGB point;
         //Convert RGB-D to PointCloud
@@ -163,11 +165,13 @@ int main(int argc, char **argv)
         seg.setMethodType (pcl::SAC_RANSAC);
         seg.setDistanceThreshold (0.01);
 
+        ROS_INFO("77777777777777777777777777");
+
         seg.setInputCloud (ptr_cloud);
         seg.segment (*inliers, *coefficients);
 
         pcl::toROSMsg(cloud, cloudmsg);
-        cloudmsg.header.frame_id = "camera";
+
 
         // ax + by + cz + d = 0;
         std::cerr << "Model coefficients: " << coefficients->values[0] << " "
@@ -182,7 +186,7 @@ int main(int argc, char **argv)
     {
       ROS_INFO("Wait Images");
     }
-
+    cloudmsg.header.frame_id = "camera";
     pointcloud_pub.publish(cloudmsg);
     ros::spinOnce();
     loop_rate.sleep();
