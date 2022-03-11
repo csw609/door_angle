@@ -19,6 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
 )
 find_package (OpenCV 3.2.0 REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 add_message_files(FILES bounding.msg BoundingBox.msg BoundingBoxes.msg)
 
@@ -35,6 +36,7 @@ catkin_package(
 include_directories(
 # include
   ${catkin_INCLUDE_DIRS}
+  ${EIGEN_INCLUDE_DIRS}
 )
 
 add_executable(door src/door.cpp)
@@ -45,3 +47,6 @@ target_link_libraries(plane_seg ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARI
 
 add_executable(fake_bounding src/fake_bounding.cpp)
 target_link_libraries(fake_bounding ${catkin_LIBRARIES})
+
+add_executable(storage_ src/storage_.cpp)
+target_link_libraries(storage_ ${catkin_LIBRARIES} ${OpenCV_LIBS})

@@ -164,9 +164,6 @@ int main(int argc, char **argv)
         seg.setModelType (pcl::SACMODEL_PLANE);
         seg.setMethodType (pcl::SAC_RANSAC);
         seg.setDistanceThreshold (0.01);
-
-        ROS_INFO("77777777777777777777777777");
-
         seg.setInputCloud (ptr_cloud);
         seg.segment (*inliers, *coefficients);
 
@@ -184,7 +181,7 @@ int main(int argc, char **argv)
     }
     else // No image
     {
-      ROS_INFO("Wait Images");
+      ROS_INFO("Wait Images && bounding box");
     }
     cloudmsg.header.frame_id = "camera";
     pointcloud_pub.publish(cloudmsg);
