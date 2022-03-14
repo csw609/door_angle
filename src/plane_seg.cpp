@@ -135,8 +135,8 @@ int main(int argc, char **argv)
         pcl::PointCloud<pcl::PointXYZRGB> cloud;
         pcl::PointXYZRGB point;
         //Convert RGB-D to PointCloud
-        for(int i = r1; i < r2; i++){
-          for(int j = c1; j < c2; j++){
+        for(int i = c1; i < c2; i++){
+          for(int j = r1; j < r2; j++){
             // RGB-D to PointCloud2
             point.z = depth_image.at<unsigned short>(i,j) / 1000.0;
             point.x = (static_cast<float>(j)-cx) * point.z  / fx;
