@@ -52,7 +52,7 @@ int main(int argc, char **argv)
   // subscriber
   ros::Subscriber rgb_image_sub   = nh.subscribe("/camera/color/image_raw", 1000, rgb_sub);
   ros::Subscriber depth_image_sub = nh.subscribe("/camera/aligned_depth_to_color/image_raw", 1000, depth_sub);
-  ros::Subscriber bouding_box_sub = nh.subscribe("/bounding_box",1000, bounding_sub);
+  ros::Subscriber bouding_box_sub = nh.subscribe("/bounding_box_array",1000, bounding_sub);
 
   // publisher
   ros::Publisher img_match_pub  = nh.advertise<sensor_msgs::Image>("match_image", 1000);
@@ -65,7 +65,7 @@ int main(int argc, char **argv)
   bool first = true;
   sensor_msgs::PointCloud2 cloudmsg;
 
-  ros::Rate loop_rate(15);
+  ros::Rate loop_rate(100);
   while (ros::ok())
   {
     if (!rgb_image_buf.empty() && !depth_image_buf.empty() && !bounding_buf.empty())
