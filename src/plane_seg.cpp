@@ -15,13 +15,12 @@
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/segmentation/sac_segmentation.h>
 
-#include "door_angle/bounding.h"
 #include "door_angle/BoundingBox.h"
 #include "door_angle/BoundingBoxes.h"
 
 std::queue<sensor_msgs::ImageConstPtr>     rgb_image_buf;
 std::queue<sensor_msgs::ImageConstPtr>     depth_image_buf;
-//std::queue<door_angle::bounding::ConstPtr> bounding_buf;
+
 std::queue<door_angle::BoundingBoxesPtr> bounding_buf;
 
 float fx = 610.8421650074351;  // need rgb calib
@@ -123,6 +122,14 @@ int main(int argc, char **argv)
         // set bounding box area
         box = bounding_buf.front()->bounding_boxes[0];
         bounding_buf.pop();
+        if(box.Class != "door"){
+          ROS_INFO("That is not door");
+          break;
+        }
+        if(box.probability < 70){ // need parameterization
+          ROS_INFO("That is not door maybe");
+          break;
+        }
         long c1 = box.xmin;
         long r1 = box.ymin;
         long c2 = box.xmax;
