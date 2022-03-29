@@ -50,3 +50,6 @@ target_link_libraries(fake_bounding ${catkin_LIBRARIES})
 
 add_executable(storage_ src/storage_.cpp)
 target_link_libraries(storage_ ${catkin_LIBRARIES} ${OpenCV_LIBS})
+
+add_executable(camera_lidar_fusion src/camera_lidar_fusion.cpp)
+target_link_libraries(camera_lidar_fusion ${catkin_LIBRARIES} ${OpenCV_LIBS})
