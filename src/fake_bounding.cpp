@@ -9,7 +9,7 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "fake_bounding");
   ros::NodeHandle nh;
 
-  ros::Publisher chatter_pub = nh.advertise<door_angle::BoundingBoxes>("/bounding_box", 1000);
+  ros::Publisher chatter_pub = nh.advertise<door_angle::BoundingBoxes>("/bounding_box_array", 1000);
 
   ros::Rate loop_rate(100);
   while (ros::ok())
