@@ -38,12 +38,22 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "camera_lidar_fusion");
   ros::NodeHandle nh;
 
+  // parameters
+  std::string image_topic, bounding_topic, scan_topic;
+  nh.param<std::string>("image_topic",image_topic,"/camera/color/image_raw");
+  nh.param<std::string>("bounding_topic",bounding_topic,"/bounding_box_array");
+  nh.param<std::string>("scan_topic",scan_topic,"/scan");
+
+  ROS_INFO("image topic : %s", image_topic.c_str());
+  ROS_INFO("bounding boxes topic : %s", bounding_topic.c_str());
+  ROS_INFO("lidar scan topic: %s", scan_topic.c_str());
+
   // Pub & Sub
   ros::Publisher fusion_image_pub = nh.advertise<sensor_msgs::Image>("fusion_image", 1000);
 
-  ros::Subscriber image_sub = nh.subscribe("/camera/color/image_raw", 1000, imgCallback);
-  ros::Subscriber bouding_box_sub = nh.subscribe("/bounding_box_array",1000, boundCallback);
-  ros::Subscriber scan_sub = nh.subscribe("/scan", 1000, scanCallback);
+  ros::Subscriber image_sub = nh.subscribe(image_topic, 1000, imgCallback);
+  ros::Subscriber bouding_box_sub = nh.subscribe(bounding_topic,1000, boundCallback);
+  ros::Subscriber scan_sub = nh.subscribe(scan_topic, 1000, scanCallback);
 
   // Transformation matrix
   Eigen::Matrix4d Tl2b = Eigen::Matrix4d::Identity();
@@ -68,6 +78,7 @@ int main(int argc, char **argv)
   intrinsic(1,2) = 252.1813169593813;
   intrinsic(2,2) = 1.0;
 
+  // cv
   cv_bridge::CvImage cv_bridge;
 
   ros::Rate loop_rate(1000);

@@ -1,0 +1,7 @@
+# image topic
+image_topic: /camera/color/image_raw
+# Bounding Boxes array topic
+bounding_topic: /bounding_box_array
+# Lidar scan topic
+scan_topic: /scan
+

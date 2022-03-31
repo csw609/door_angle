@@ -1,0 +1,8 @@
+<launch>
+    <arg name="config" default="config.yaml"/>
+
+    <rosparam command="load" file="$(find door_angle)/config/$(arg config)" />
+
+    <node pkg="door_angle" type="camera_lidar_fusion" name="camera_lidar_fusion" output="screen">
+    </node>
+</launch>
