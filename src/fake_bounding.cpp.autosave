@@ -20,7 +20,7 @@ int main(int argc, char **argv)
     box.xmax = 500;
     box.ymin = 100;
     box.ymax = 400;
-    box.Class = "handle";
+    box.Class = "handles";
     box.probability = 1.0;
     msg.header.stamp = ros::Time::now();
     msg.header.frame_id = "camera";

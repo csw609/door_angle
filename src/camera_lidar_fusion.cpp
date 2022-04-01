@@ -4,12 +4,21 @@
 
 #include "sensor_msgs/LaserScan.h"
 #include "sensor_msgs/Image.h"
+#include <sensor_msgs/PointCloud2.h>
 
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/opencv.hpp>
 
 #include "door_angle/BoundingBox.h"
 #include "door_angle/BoundingBoxes.h"
+
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl/point_cloud.h>
+#include <pcl/PCLPointCloud2.h>
+#include <pcl/point_types.h>
+#include <pcl/sample_consensus/method_types.h>
+#include <pcl/sample_consensus/model_types.h>
+#include <pcl/segmentation/sac_segmentation.h>
 
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Geometry>
@@ -50,6 +59,7 @@ int main(int argc, char **argv)
 
   // Pub & Sub
   ros::Publisher fusion_image_pub = nh.advertise<sensor_msgs::Image>("fusion_image", 1000);
+  ros::Publisher cloud_door_pub    = nh.advertise<sensor_msgs::PointCloud2>("/cloud_door", 1000);
 
   ros::Subscriber image_sub = nh.subscribe(image_topic, 1000, imgCallback);
   ros::Subscriber bouding_box_sub = nh.subscribe(bounding_topic,1000, boundCallback);
@@ -57,13 +67,23 @@ int main(int argc, char **argv)
 
   // Transformation matrix
   Eigen::Matrix4d Tl2b = Eigen::Matrix4d::Identity();
-  //Eigen::Matrix4d Tc2b = Eigen::Matrix4d::Identity();
-  //Eigen::Matrix4d Tb2l = Eigen::Matrix4d::Identity();
+  Tl2b(2,3) = 10.0;
+
+  Eigen::Matrix4d Tb2l = Eigen::Matrix4d::Identity();
+  Tb2l(2,3) = -Tl2b(2,3);
 
   Eigen::Matrix4d Tb2c = Eigen::Matrix4d::Zero();
-  Tb2c(2,0) = 1;
-  Tb2c(0,1) = -1;
-  Tb2c(1,2) = -1;
+  Tb2c(2,0) = 1.0;
+  Tb2c(0,1) = -1.0;
+  Tb2c(1,2) = -1.0;
+  Tb2c(3,3) = 1.0;
+
+  Eigen::Matrix4d Tc2b = Eigen::Matrix4d::Zero();
+  // Tranpose Tb2c's rotation part => if they get translation code should be modify
+  Tc2b(0,2) = Tb2c(2,0);
+  Tc2b(1,0) = Tb2c(0,1);
+  Tc2b(2,1) = Tb2c(1,2);
+  Tc2b(3,3) = 1.0;
 
   // Camera Intrinsic
   Eigen::Matrix3d intrinsic;
@@ -105,28 +125,29 @@ int main(int argc, char **argv)
       door_angle::BoundingBoxes boxes;
       std_msgs::Header header;
 
-
+      sensor_msgs::PointCloud2 cloudmsg;
 
       //rgb, scan, bounding box time sync 0.003
-      if (time_r < time_s - 0.003)
-      {
-        image_buf.pop();
-        ROS_INFO("pop rgb_image\n");
-      }
-      else if (time_r > time_s + 0.003)
-      {
-        scan_buf.pop();
-        ROS_INFO("pop scan\n");
-      }
-      else if(time_r < time_b - 0.003){
-        image_buf.pop();
-        ROS_INFO("pop rgb_image\n");
-      }
-      else if(time_r > time_b + 0.003){
-        bounding_buf.pop();
-        ROS_INFO("pop bound header\n");
-      }
-      else if(!bounding_buf.front()->bounding_boxes.empty())  //bounding box not empty && satisfy time sync
+      //      if (time_r < time_s - 0.003)
+      //      {
+      //        image_buf.pop();
+      //        ROS_INFO("pop rgb_image\n");
+      //      }
+      //      else if (time_r > time_s + 0.003)
+      //      {
+      //        scan_buf.pop();
+      //        ROS_INFO("pop scan\n");
+      //      }
+      //      else if(time_r < time_b - 0.003){
+      //        image_buf.pop();
+      //        ROS_INFO("pop rgb_image\n");
+      //      }
+      //      else if(time_r > time_b + 0.003){
+      //        bounding_buf.pop();
+      //        ROS_INFO("pop bound header\n");
+      //      }
+      //      else
+      if(!bounding_buf.front()->bounding_boxes.empty())  //bounding box not empty && satisfy time sync
       {
         time = image_buf.front()->header.stamp.toSec();
 
@@ -172,7 +193,7 @@ int main(int argc, char **argv)
           point_l(2) = 0.0; // z
           point_l(3) = 1.0;
 
-          //scanPoints.push_back(point);
+          //scanPoints.push_back(point_l);
           // frame convert
           // lidar => base_link frame => camera
           Eigen::Vector4d point_c;
@@ -201,7 +222,8 @@ int main(int argc, char **argv)
             image.at<cv::Vec3b>(static_cast<int>(point_uv(1)),static_cast<int>(point_uv(0)))[2] = 255;
           }
 
-          s2iPoints.push_back(point_uv);
+          //scan to image point
+          //s2iPoints.push_back(point_uv);
         }
 
         sensor_msgs::Image fusion_image;
@@ -209,15 +231,66 @@ int main(int argc, char **argv)
         cv_bridge.toImageMsg(fusion_image);
 
         // bouding box fusion process
+        pcl::PointCloud<pcl::PointXYZRGB> cloud;
+        pcl::PointXYZRGB point;
         for(unsigned long i = 0; i < boxes.bounding_boxes.size(); i++){
           door_angle::BoundingBox box;
           box = boxes.bounding_boxes[0];
-          if( box.Class == "door"){
+          if( box.Class == "handle"){
+            ROS_INFO("handle!");
             continue;
           }
-          else if( box.Class == "handle"){
-            std::cout << "handle!!!!" << std::endl;
+          else if( box.Class == "door"){
+            std::cout << "door!!!!" << std::endl;
+            Eigen::Vector4d camera_origin = Eigen::Vector4d::Zero();
+            Eigen::Vector4d camera_bounding_left, camera_bounding_right;
+            camera_bounding_left(0) = box.xmin + intrinsic(0,2);
+            camera_bounding_left(1) = box.ymin + intrinsic(1,2);
+            camera_bounding_left(2) = 1.0;
+            camera_bounding_left(3) = 1.0; // homogeneous
+
+            camera_bounding_right(0) = box.xmax + intrinsic(0,2);
+            camera_bounding_right(1) = box.ymin + intrinsic(1,2);
+            camera_bounding_right(2) = 1.0;
+            camera_bounding_right(3) = 1.0; // homogeneous
+
+            // camera => base_link => lidar
+            Eigen::Vector4d camera_origin_l = Tb2l * Tc2b * camera_origin;
+            Eigen::Vector4d camera_bounding_left_l = Tb2l * Tc2b * camera_bounding_left;
+            Eigen::Vector4d camera_bounding_right_l = Tb2l * Tc2b * camera_bounding_right;
+
+            Eigen::Vector2d vLeft, vRight;
+            vLeft(0) = camera_bounding_left_l(0) - camera_origin_l(0);
+            vLeft(1) = camera_bounding_left_l(1) - camera_origin_l(1);
+
+            vRight(0) = camera_bounding_right_l(0) - camera_origin_l(0);
+            vRight(1) = camera_bounding_right_l(1) - camera_origin_l(1);
+
+            double a1 = vLeft(0);
+            double b1 = vLeft(1);
+
+            double c  = - a1 * camera_origin_l(0) + - b1 * camera_origin_l(1);
+
+            double a2 = vRight(0);
+            double b2 = vRight(1);
+
+            for(unsigned long i = 0; i < scanPoints.size(); i++){
+              if(a1 * scanPoints[i].x() + b1 * scanPoints[i].y() + c > 0){  // => wrong
+                if(a2 * scanPoints[i].x() + b2 * scanPoints[i].y() + c > 0){ // => wrong
+                  point.x = static_cast<float>(scanPoints[i].x());
+                  point.y = static_cast<float>(scanPoints[i].y());
+                  point.z = 0;
+                  point.b = 255;
+                  point.g = 0;
+                  point.r = 0;
+
+                  cloud.push_back(point);
+                  //cloud.
+                }
+              }
+            }
           }
+
           else{
             continue;
           }
@@ -225,6 +298,10 @@ int main(int argc, char **argv)
 
         //publish fusion image
         fusion_image_pub.publish(fusion_image);
+
+        //publish door point cloud
+        pcl::toROSMsg(cloud, cloudmsg);
+        cloud_door_pub.publish(cloudmsg);
 
       }
     }
@@ -240,7 +317,100 @@ int main(int argc, char **argv)
 
     ros::spinOnce();
     loop_rate.sleep();
-  } //while
+  } // while
 
   return 0;
 }
+
+
+
+
+// keep code
+
+// draw lidar z = 0 plane (x-y plane) on image
+//        Eigen::Vector4d xy_plane, origin_l;
+//        xy_plane(0) = 0; xy_plane(1) = 0; xy_plane(2) = 1; xy_plane(3) = 0; // normal vector of xy plane
+//        origin_l(0) = 0; origin_l(1) = 0; origin_l(2) = 0; origin_l(3) = 1; // origin of lidar
+
+//        Eigen::Vector4d xy_plane_c = Tb2c * Tl2b * xy_plane; // lidar => base_link => camera
+//        Eigen::Vector4d origin_lc = Tb2c * Tl2b * origin_l; // lidar => base_link => camera
+//        Eigen::Vector3d xy_plane_c3, origin_lc3;
+
+//        xy_plane_c3(0) = xy_plane_c(0);
+//        xy_plane_c3(1) = xy_plane_c(1);
+//        xy_plane_c3(2) = xy_plane_c(2);
+
+//        origin_lc3(0) = origin_lc(0);
+//        origin_lc3(1) = origin_lc(1);
+//        origin_lc3(2) = origin_lc(2);
+
+//        // xy_plane normal vector in uv space
+//        Eigen::Vector3d xy_plane_uv = intrinsic * xy_plane_c3; // camera => image
+//        //Eigen::Vector3d origin_l_uv = intrinsic * origin_lc3; // camera => image
+
+
+//        double mag = xy_plane_uv(0) * xy_plane_uv(0) + xy_plane_uv(1) * xy_plane_uv(1) + xy_plane_uv(2) * xy_plane_uv(2);
+//        mag = std::sqrt(mag);
+
+//        std::cout << " 0 : " << xy_plane_uv(0) << " 1 : " << xy_plane_uv(1) << " 2 : " << xy_plane_uv(2) << std::endl;
+
+//        xy_plane_uv(0) = xy_plane_uv(0) / mag;
+//        xy_plane_uv(1) = xy_plane_uv(1) / mag;
+//        xy_plane_uv(2) = xy_plane_uv(2) / mag;
+
+//        //origin_l_uv(0) = origin_l_uv(0) / origin_l_uv(2);
+//        //origin_l_uv(1) = origin_l_uv(1) / origin_l_uv(2);
+//        //origin_l_uv(2) = origin_l_uv(2) / origin_l_uv(2);
+
+//        std::cout << " 0' : " << xy_plane_uv(0) << " 1' : " << xy_plane_uv(1) << " 2' : " << xy_plane_uv(2) << std::endl;
+
+
+//        double a = xy_plane_uv(0);
+//        double b = xy_plane_uv(1);
+//        double c = xy_plane_uv(2);
+
+//        // lidar origin point on image_plane
+//        //int r_lo = static_cast<int>(origin_l_uv(0));
+//        //int c_lo = static_cast<int>(origin_l_uv(1));
+//        std::cout << " a : " << a << " b : " << b <<  " c : " << c << std::endl;
+
+//        if(b != 0.0){
+//          for(int i = 0; i < image.cols; i++){
+//            // center coordinate, intersection xy-plane with image
+//            int u = i - static_cast<int>(intrinsic(0,2));
+//            int v = static_cast<int>(-u * a/b - c/b);
+
+//            // left-up coordinate
+//            int r = v + static_cast<int>(intrinsic(1,2));
+//            int c = u + static_cast<int>(intrinsic(0,2));
+
+//            //std::cout << " u : " << u << " v : " << v << std::endl;
+//            if(r > 0 && r < image.rows && c > 0 && c < image.cols){
+
+//              image.at<cv::Vec3b>(r,c)[0] = 255;
+//              image.at<cv::Vec3b>(r,c)[1] = 0;
+//              image.at<cv::Vec3b>(r,c)[2] = 0;
+//            }
+//          }
+//        }
+//        else{
+//          for(int i = 0; i < image.rows; i++){
+//            // center coordinate, intersection xy-plane with image
+//            int v = i - static_cast<int>(intrinsic(1,2));
+//            int u = static_cast<int>(-c/a);
+
+//            // left-up coordinate
+//            int r = v + static_cast<int>(intrinsic(1,2));
+//            int c = u + static_cast<int>(intrinsic(0,2));
+
+//            std::cout << " u : " << u << " v : " << v << std::endl;
+//            if(v > 0 && v < image.rows && u > 0 && u < image.cols){
+
+//              image.at<cv::Vec3b>(v,u)[0] = 255;
+//              image.at<cv::Vec3b>(v,u)[1] = 0;
+//              image.at<cv::Vec3b>(v,u)[2] = 0;
+//            }
+
+//          }
+
+//        }
