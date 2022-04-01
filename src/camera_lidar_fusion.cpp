@@ -104,7 +104,7 @@ int main(int argc, char **argv)
   ros::Rate loop_rate(1000);
 
   int lack_count = 0;
-
+  sensor_msgs::PointCloud2 cloudmsg;
   while (ros::ok())
   {
     // If data received
@@ -125,7 +125,7 @@ int main(int argc, char **argv)
       door_angle::BoundingBoxes boxes;
       std_msgs::Header header;
 
-      sensor_msgs::PointCloud2 cloudmsg;
+
 
       //rgb, scan, bounding box time sync 0.003
       //      if (time_r < time_s - 0.003)
@@ -300,7 +300,7 @@ int main(int argc, char **argv)
         fusion_image_pub.publish(fusion_image);
 
         //publish door point cloud
-        pcl::toROSMsg(cloud, cloudmsg);
+        pcl::toROSMsg(cloud, cloudmsg); //convert pcl::PointCloud<pcl::PointXYZRGB> to sensor_msgs::PointCloud2
         cloud_door_pub.publish(cloudmsg);
 
       }
@@ -327,7 +327,7 @@ int main(int argc, char **argv)
 
 // keep code
 
-// draw lidar z = 0 plane (x-y plane) on image
+// ///// code for draw lidar z = 0 plane (x-y plane) on image => wrong
 //        Eigen::Vector4d xy_plane, origin_l;
 //        xy_plane(0) = 0; xy_plane(1) = 0; xy_plane(2) = 1; xy_plane(3) = 0; // normal vector of xy plane
 //        origin_l(0) = 0; origin_l(1) = 0; origin_l(2) = 0; origin_l(3) = 1; // origin of lidar
