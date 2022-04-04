@@ -52,13 +52,25 @@ int main(int argc, char **argv)
 
   // parameters
   std::string image_topic, bounding_topic, scan_topic;
+  std::string fx,fy,cx,cy;
+
   nh.param<std::string>("image_topic",image_topic,"/camera/color/image_raw");
   nh.param<std::string>("bounding_topic",bounding_topic,"/bounding_box_array");
   nh.param<std::string>("scan_topic",scan_topic,"/scan");
 
+  nh.param<std::string>("fx",fx,"462.1379699707031");
+  nh.param<std::string>("fy",fy,"462.1379699707031");
+  nh.param<std::string>("cx",cx,"320.0");
+  nh.param<std::string>("cy",cy,"240.0");
+
   ROS_INFO("image topic : %s", image_topic.c_str());
   ROS_INFO("bounding boxes topic : %s", bounding_topic.c_str());
   ROS_INFO("lidar scan topic: %s", scan_topic.c_str());
+
+  ROS_INFO("fx : %s", fx.c_str());
+  ROS_INFO("fy : %s", fy.c_str());
+  ROS_INFO("cx : %s", cx.c_str());
+  ROS_INFO("cy : %s", cy.c_str());
 
   // Pub & Sub
   ros::Publisher fusion_image_pub = nh.advertise<sensor_msgs::Image>("fusion_image", 1000);
@@ -98,10 +110,10 @@ int main(int argc, char **argv)
       intrinsic(i,j) = 0;
     }
   }
-  intrinsic(0,0) = 462.1379699707031;
-  intrinsic(1,1) = 462.1379699707031;
-  intrinsic(0,2) = 320.0;
-  intrinsic(1,2) = 240.0;
+  intrinsic(0,0) = std::stod(fx);
+  intrinsic(1,1) = std::stod(fy);
+  intrinsic(0,2) = std::stod(cx);
+  intrinsic(1,2) = std::stod(cy);
   intrinsic(2,2) = 1.0;
 
   // cv
@@ -196,7 +208,7 @@ int main(int argc, char **argv)
         tf_received = true;
       }
       catch (tf2::TransformException &ex) {
-        ROS_WARN("%s",ex.what());
+        //ROS_WARN("%s",ex.what());
         continue;
       }
     }
@@ -221,24 +233,24 @@ int main(int argc, char **argv)
 
 
 
-      //rgb, scan, bounding box time sync 0.003
-      if (time_r < time_s - 0.003)
+      //rgb, scan, bounding box time sync 1.0 s
+      if (time_r < time_s - 1)
       {
         image_buf.pop();
         ROS_INFO("pop rgb_image\n");
       }
-      else if (time_r > time_s + 0.003)
+      else if (time_r > time_s + 1)
       {
         scan_buf.pop();
         ROS_INFO("rgb : %f", time_r);
         ROS_INFO("s : %f", time_s);
         ROS_INFO("pop scan\n");
       }
-      else if(time_r < time_b - 10){
+      else if(time_r < time_b - 1){
         image_buf.pop();
         ROS_INFO("pop rgb_image\n");
       }
-      else if(time_r > time_b + 10){
+      else if(time_r > time_b + 1){
         bounding_buf.pop();
         ROS_INFO("pop bound header\n");
       }
@@ -280,11 +292,15 @@ int main(int argc, char **argv)
 
         // image lidar fusion
         for(unsigned long i = 0; i < scan.ranges.size(); i++){
+          if(static_cast<double>(scan.ranges[i]) < 0.3) continue;
+          double angle = min_angle + diff_angle * i;
+          if(angle > -3.1415926535 / 2 && angle < 3.1415926535 / 2) continue;
 
+          //ROS_INFO("angle : %f",angle);
           // get lidar point
           Eigen::Vector4d point_l;
-          point_l(0) = std::cos(min_angle + diff_angle * i) * static_cast<double>(scan.ranges[i]);
-          point_l(1) = std::sin(min_angle + diff_angle * i) * static_cast<double>(scan.ranges[i]);
+          point_l(0) = std::cos(angle) * static_cast<double>(scan.ranges[i]);
+          point_l(1) = std::sin(angle) * static_cast<double>(scan.ranges[i]);
           point_l(2) = 0.0; // z
           point_l(3) = 1.0;
 
@@ -398,6 +414,7 @@ int main(int argc, char **argv)
 
         //publish door point cloud
         pcl::toROSMsg(cloud, cloudmsg); //convert pcl::PointCloud<pcl::PointXYZRGB> to sensor_msgs::PointCloud2
+        cloudmsg.header.frame_id = "base_footprint";
         cloud_door_pub.publish(cloudmsg);
 
       }
@@ -405,7 +422,7 @@ int main(int argc, char **argv)
 
     else{
       lack_count++;
-      if(lack_count % 2000 == 0){
+      if(lack_count % 2000000 == 0){
         //ROS_INFO("wait messages");
 
         lack_count = 0;
