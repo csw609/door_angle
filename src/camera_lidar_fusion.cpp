@@ -98,10 +98,10 @@ int main(int argc, char **argv)
       intrinsic(i,j) = 0;
     }
   }
-  intrinsic(0,0) = 610.8421650074351;
-  intrinsic(1,1) = 610.0254467507624;
-  intrinsic(0,2) = 336.7626691266633;
-  intrinsic(1,2) = 252.1813169593813;
+  intrinsic(0,0) = 462.1379699707031;
+  intrinsic(1,1) = 462.1379699707031;
+  intrinsic(0,2) = 320.0;
+  intrinsic(1,2) = 240.0;
   intrinsic(2,2) = 1.0;
 
   // cv
