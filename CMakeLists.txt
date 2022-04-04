@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   visualization_msgs
   pcl_ros
   message_generation
+  tf2
 )
 find_package (OpenCV 3.2.0 REQUIRED)
 #find_package(Eigen3 REQUIRED)

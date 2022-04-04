@@ -5,6 +5,9 @@
 #include "sensor_msgs/LaserScan.h"
 #include "sensor_msgs/Image.h"
 #include <sensor_msgs/PointCloud2.h>
+#include <tf2_ros/transform_listener.h>
+#include <geometry_msgs/TransformStamped.h>
+#include <geometry_msgs/Twist.h>
 
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/opencv.hpp>
@@ -65,6 +68,9 @@ int main(int argc, char **argv)
   ros::Subscriber bouding_box_sub = nh.subscribe(bounding_topic,1000, boundCallback);
   ros::Subscriber scan_sub = nh.subscribe(scan_topic, 1000, scanCallback);
 
+  tf2_ros::Buffer tfBuffer;
+  tf2_ros::TransformListener tfListener(tfBuffer);
+
   // Transformation matrix
   Eigen::Matrix4d Tl2b = Eigen::Matrix4d::Identity();
   Tl2b(2,3) = 0.0;
@@ -105,8 +111,96 @@ int main(int argc, char **argv)
 
   int lack_count = 0;
   sensor_msgs::PointCloud2 cloudmsg;
+
+  geometry_msgs::TransformStamped tfs2b;
+  geometry_msgs::TransformStamped tfc2b;
+
+  bool tf_received = false;
+
   while (ros::ok())
   {
+    //receive transform
+    if(!tf_received){
+
+      try{
+        tfs2b = tfBuffer.lookupTransform("base_link", "velodyne",
+                                         ros::Time(0));
+        tfc2b = tfBuffer.lookupTransform("base_link", "d435_color_optical_frame",
+                                         ros::Time(0));
+        ROS_INFO("%s", tfs2b.child_frame_id.c_str());
+        ROS_INFO("%s", tfc2b.child_frame_id.c_str());
+        //ROS_INFO("%f" ,tfs2b.transform.translation.z);
+
+        Eigen::Quaterniond qs2b;
+        qs2b.x() = tfs2b.transform.rotation.x;
+        qs2b.y() = tfs2b.transform.rotation.y;
+        qs2b.z() = tfs2b.transform.rotation.z;
+        qs2b.w() = tfs2b.transform.rotation.w;
+        Eigen::Matrix3d rs2b = qs2b.normalized().toRotationMatrix();
+        Eigen::Matrix3d rb2s = rs2b.inverse();
+        Eigen::Vector3d vs2b, vb2s;
+        vs2b(0) = tfs2b.transform.translation.x;
+        vs2b(1) = tfs2b.transform.translation.y;
+        vs2b(2) = tfs2b.transform.translation.z;
+        vb2s = -rb2s*vs2b;
+
+        Tl2b(0,0) = rs2b(0,0); Tl2b(0,1) = rs2b(0,1); Tl2b(0,2) = rs2b(0,2);
+        Tl2b(1,0) = rs2b(1,0); Tl2b(1,1) = rs2b(1,1); Tl2b(1,2) = rs2b(1,2);
+        Tl2b(2,0) = rs2b(2,0); Tl2b(2,1) = rs2b(2,1); Tl2b(2,2) = rs2b(2,2);
+        Tl2b(0,3) = tfs2b.transform.translation.x;
+        Tl2b(1,3) = tfs2b.transform.translation.y;
+        Tl2b(2,3) = tfs2b.transform.translation.z;
+
+        Tb2l(0,0) = rb2s(0,0); Tb2l(0,1) = rb2s(0,1); Tb2l(0,2) = rb2s(0,2);
+        Tb2l(1,0) = rb2s(1,0); Tb2l(1,1) = rb2s(1,1); Tb2l(1,2) = rb2s(1,2);
+        Tb2l(2,0) = rb2s(2,0); Tb2l(2,1) = rb2s(2,1); Tb2l(2,2) = rb2s(2,2);
+        Tb2l(0,3) = vb2s(0);
+        Tb2l(1,3) = vb2s(1);
+        Tb2l(2,3) = vb2s(2);
+
+
+        Eigen::Quaterniond qc2b;
+        qc2b.x() = tfc2b.transform.rotation.x;
+        qc2b.y() = tfc2b.transform.rotation.y;
+        qc2b.z() = tfc2b.transform.rotation.z;
+        qc2b.w() = tfc2b.transform.rotation.w;
+        Eigen::Matrix3d rc2b = qc2b.normalized().toRotationMatrix();
+        Eigen::Matrix3d rb2c = rc2b.inverse();
+        Eigen::Vector3d vc2b, vb2c;
+        vc2b(0) = tfc2b.transform.translation.x;
+        vc2b(1) = tfc2b.transform.translation.y;
+        vc2b(2) = tfc2b.transform.translation.z;
+        vb2c = -rb2c*vc2b;
+
+        Tc2b(0,0) = rc2b(0,0); Tc2b(0,1) = rc2b(0,1); Tc2b(0,2) = rc2b(0,2);
+        Tc2b(1,0) = rc2b(1,0); Tc2b(1,1) = rc2b(1,1); Tc2b(1,2) = rc2b(1,2);
+        Tc2b(2,0) = rc2b(2,0); Tc2b(2,1) = rc2b(2,1); Tc2b(2,2) = rc2b(2,2);
+        Tc2b(0,3) = tfc2b.transform.translation.x;
+        Tc2b(1,3) = tfc2b.transform.translation.y;
+        Tc2b(2,3) = tfc2b.transform.translation.z;
+
+        Tb2c(0,0) = rb2c(0,0); Tb2c(0,1) = rb2c(0,1); Tb2c(0,2) = rb2c(0,2);
+        Tb2c(1,0) = rb2c(1,0); Tb2c(1,1) = rb2c(1,1); Tb2c(1,2) = rb2c(1,2);
+        Tb2c(2,0) = rb2c(2,0); Tb2c(2,1) = rb2c(2,1); Tb2c(2,2) = rb2c(2,2);
+        Tb2c(0,3) = vb2c(0);
+        Tb2c(1,3) = vb2c(1);
+        Tb2c(2,3) = vb2c(2);
+
+
+        std::cout << Tl2b << std::endl;
+        std::cout << Tc2b << std::endl;
+        std::cout << Tb2l << std::endl;
+        std::cout << Tb2c << std::endl;
+
+
+        tf_received = true;
+      }
+      catch (tf2::TransformException &ex) {
+        ROS_WARN("%s",ex.what());
+        continue;
+      }
+    }
+
     // If data received
     if (!image_buf.empty() && !scan_buf.empty() && !bounding_buf.empty())
     {
@@ -128,26 +222,26 @@ int main(int argc, char **argv)
 
 
       //rgb, scan, bounding box time sync 0.003
-//      if (time_r < time_s - 0.003)
-//      {
-//        image_buf.pop();
-//        ROS_INFO("pop rgb_image\n");
-//      }
-//      else if (time_r > time_s + 0.003)
-//      {
-//        scan_buf.pop();
-//        ROS_INFO("pop scan\n");
-//      }
-//      else if(time_r < time_b - 10){
-//        image_buf.pop();
-//        ROS_INFO("pop rgb_image\n");
-//      }
-//      else if(time_r > time_b + 10){
-//        bounding_buf.pop();
-//        ROS_INFO("pop bound header\n");
-//      }
-//      else
-        if(!bounding_buf.front()->bounding_boxes.empty())  //bounding box not empty && satisfy time sync
+      //      if (time_r < time_s - 0.003)
+      //      {
+      //        image_buf.pop();
+      //        ROS_INFO("pop rgb_image\n");
+      //      }
+      //      else if (time_r > time_s + 0.003)
+      //      {
+      //        scan_buf.pop();
+      //        ROS_INFO("pop scan\n");
+      //      }
+      //      else if(time_r < time_b - 10){
+      //        image_buf.pop();
+      //        ROS_INFO("pop rgb_image\n");
+      //      }
+      //      else if(time_r > time_b + 10){
+      //        bounding_buf.pop();
+      //        ROS_INFO("pop bound header\n");
+      //      }
+      //      else
+      if(!bounding_buf.front()->bounding_boxes.empty())  //bounding box not empty && satisfy time sync
       {
         time = image_buf.front()->header.stamp.toSec();
 
