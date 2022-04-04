@@ -67,7 +67,7 @@ int main(int argc, char **argv)
 
   // Transformation matrix
   Eigen::Matrix4d Tl2b = Eigen::Matrix4d::Identity();
-  Tl2b(2,3) = 10.0;
+  Tl2b(2,3) = 0.0;
 
   Eigen::Matrix4d Tb2l = Eigen::Matrix4d::Identity();
   Tb2l(2,3) = -Tl2b(2,3);
@@ -128,26 +128,26 @@ int main(int argc, char **argv)
 
 
       //rgb, scan, bounding box time sync 0.003
-      //      if (time_r < time_s - 0.003)
-      //      {
-      //        image_buf.pop();
-      //        ROS_INFO("pop rgb_image\n");
-      //      }
-      //      else if (time_r > time_s + 0.003)
-      //      {
-      //        scan_buf.pop();
-      //        ROS_INFO("pop scan\n");
-      //      }
-      //      else if(time_r < time_b - 0.003){
-      //        image_buf.pop();
-      //        ROS_INFO("pop rgb_image\n");
-      //      }
-      //      else if(time_r > time_b + 0.003){
-      //        bounding_buf.pop();
-      //        ROS_INFO("pop bound header\n");
-      //      }
-      //      else
-      if(!bounding_buf.front()->bounding_boxes.empty())  //bounding box not empty && satisfy time sync
+//      if (time_r < time_s - 0.003)
+//      {
+//        image_buf.pop();
+//        ROS_INFO("pop rgb_image\n");
+//      }
+//      else if (time_r > time_s + 0.003)
+//      {
+//        scan_buf.pop();
+//        ROS_INFO("pop scan\n");
+//      }
+//      else if(time_r < time_b - 10){
+//        image_buf.pop();
+//        ROS_INFO("pop rgb_image\n");
+//      }
+//      else if(time_r > time_b + 10){
+//        bounding_buf.pop();
+//        ROS_INFO("pop bound header\n");
+//      }
+//      else
+        if(!bounding_buf.front()->bounding_boxes.empty())  //bounding box not empty && satisfy time sync
       {
         time = image_buf.front()->header.stamp.toSec();
 
@@ -175,7 +175,7 @@ int main(int argc, char **argv)
       if(!image.empty() && !scan.ranges.empty()){
         //ROS_INFO("debug11111");
         boxes.bounding_boxes = bounding_buf.front()->bounding_boxes;
-        std::cout << " number of bounding boxes : " << boxes.bounding_boxes.size();
+        std::cout << " number of bounding boxes : " << boxes.bounding_boxes.size() << std::endl;
 
         std::vector<Eigen::Vector3d> scanPoints;
         std::vector<Eigen::Vector3d> s2iPoints;
@@ -218,8 +218,8 @@ int main(int argc, char **argv)
           int c = static_cast<int>(point_uv(0));
           if(r > 0 && r < image.rows && c > 0 && c < image.cols){
             image.at<cv::Vec3b>(r,c)[0] = 255;
-            image.at<cv::Vec3b>(static_cast<int>(point_uv(1)),static_cast<int>(point_uv(0)))[1] = 255;
-            image.at<cv::Vec3b>(static_cast<int>(point_uv(1)),static_cast<int>(point_uv(0)))[2] = 255;
+            image.at<cv::Vec3b>(r,c)[1] = 255;
+            image.at<cv::Vec3b>(r,c)[2] = 255;
           }
 
           //scan to image point
@@ -236,11 +236,11 @@ int main(int argc, char **argv)
         for(unsigned long i = 0; i < boxes.bounding_boxes.size(); i++){
           door_angle::BoundingBox box;
           box = boxes.bounding_boxes[0];
-          if( box.Class == "handle"){
+          if( box.Class == "door"){
             ROS_INFO("handle!");
             continue;
           }
-          else if( box.Class == "door"){
+          else if( box.Class == "handle"){
             std::cout << "door!!!!" << std::endl;
             Eigen::Vector4d camera_origin = Eigen::Vector4d::Zero();
             Eigen::Vector4d camera_bounding_left, camera_bounding_right;
@@ -275,8 +275,10 @@ int main(int argc, char **argv)
             double b2 = vRight(1);
 
             for(unsigned long i = 0; i < scanPoints.size(); i++){
+              // scan point between plane contain lines from bounding box left Y, right Y, They are  perpendicular to the floor
               if(a1 * scanPoints[i].x() + b1 * scanPoints[i].y() + c > 0){  // => wrong
                 if(a2 * scanPoints[i].x() + b2 * scanPoints[i].y() + c > 0){ // => wrong
+
                   point.x = static_cast<float>(scanPoints[i].x());
                   point.y = static_cast<float>(scanPoints[i].y());
                   point.z = 0;
@@ -309,14 +311,14 @@ int main(int argc, char **argv)
     else{
       lack_count++;
       if(lack_count % 2000 == 0){
-        ROS_INFO("wait messages");
+        //ROS_INFO("wait messages");
 
         lack_count = 0;
       }
     }
 
     ros::spinOnce();
-    loop_rate.sleep();
+    //loop_rate.sleep();
   } // while
 
   return 0;
