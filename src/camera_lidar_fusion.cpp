@@ -222,26 +222,27 @@ int main(int argc, char **argv)
 
 
       //rgb, scan, bounding box time sync 0.003
-      //      if (time_r < time_s - 0.003)
-      //      {
-      //        image_buf.pop();
-      //        ROS_INFO("pop rgb_image\n");
-      //      }
-      //      else if (time_r > time_s + 0.003)
-      //      {
-      //        scan_buf.pop();
-      //        ROS_INFO("pop scan\n");
-      //      }
-      //      else if(time_r < time_b - 10){
-      //        image_buf.pop();
-      //        ROS_INFO("pop rgb_image\n");
-      //      }
-      //      else if(time_r > time_b + 10){
-      //        bounding_buf.pop();
-      //        ROS_INFO("pop bound header\n");
-      //      }
-      //      else
-      if(!bounding_buf.front()->bounding_boxes.empty())  //bounding box not empty && satisfy time sync
+      if (time_r < time_s - 0.003)
+      {
+        image_buf.pop();
+        ROS_INFO("pop rgb_image\n");
+      }
+      else if (time_r > time_s + 0.003)
+      {
+        scan_buf.pop();
+        ROS_INFO("rgb : %f", time_r);
+        ROS_INFO("s : %f", time_s);
+        ROS_INFO("pop scan\n");
+      }
+      else if(time_r < time_b - 10){
+        image_buf.pop();
+        ROS_INFO("pop rgb_image\n");
+      }
+      else if(time_r > time_b + 10){
+        bounding_buf.pop();
+        ROS_INFO("pop bound header\n");
+      }
+      else if(!bounding_buf.front()->bounding_boxes.empty())  //bounding box not empty && satisfy time sync
       {
         time = image_buf.front()->header.stamp.toSec();
 

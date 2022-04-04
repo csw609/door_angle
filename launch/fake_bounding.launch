@@ -1,0 +1,8 @@
+<launch>
+    <arg name="config" default="config.yaml"/>
+
+    <rosparam command="load" file="$(find door_angle)/config/$(arg config)" />
+
+    <node pkg="door_angle" type="fake_bounding" name="fake_bounding" output="screen">
+    </node>
+</launch>
