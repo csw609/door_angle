@@ -284,7 +284,7 @@ int main(int argc, char **argv)
         boxes.bounding_boxes = bounding_buf.front()->bounding_boxes;
         std::cout << " number of bounding boxes : " << boxes.bounding_boxes.size() << std::endl;
 
-        std::vector<Eigen::Vector3d> scanPoints;
+        std::vector<Eigen::Vector4d> scanPoints;
         std::vector<Eigen::Vector3d> s2iPoints;
         double min_angle = static_cast<double>(scan.angle_min);
         double diff_angle = static_cast<double>(scan.angle_increment);
@@ -357,7 +357,36 @@ int main(int argc, char **argv)
           }
           else if( box.Class == "handle"){
             std::cout << "handle!!!!" << std::endl;
+            int xmin = static_cast<int>(box.xmin);
+            int xmax = static_cast<int>(box.xmax);
+            int ymin = static_cast<int>(box.ymin);
+            int ymax = static_cast<int>(box.ymax);
+            // bouding box visualize
+            for(int c = xmin; c < xmax; c++){
+              image.at<cv::Vec3b>(ymin,c)[0] = 0;
+              image.at<cv::Vec3b>(ymin,c)[1] = 0;
+              image.at<cv::Vec3b>(ymin,c)[2] = 255;
+
+              image.at<cv::Vec3b>(ymax,c)[0] = 0;
+              image.at<cv::Vec3b>(ymax,c)[1] = 0;
+              image.at<cv::Vec3b>(ymax,c)[2] = 255;
+            }
+            for(int r = ymin + 1; r < ymax - 1; r++){
+              image.at<cv::Vec3b>(r, xmin)[0] = 0;
+              image.at<cv::Vec3b>(r, xmin)[1] = 0;
+              image.at<cv::Vec3b>(r, xmin)[2] = 255;
+
+              image.at<cv::Vec3b>(r, xmax)[0] = 0;
+              image.at<cv::Vec3b>(r, xmax)[1] = 0;
+              image.at<cv::Vec3b>(r, xmax)[2] = 255;
+            }
+
+
+
+
             Eigen::Vector4d camera_origin = Eigen::Vector4d::Zero();
+            camera_origin(3) = 1.0; // homogeneous
+
             Eigen::Vector4d camera_bounding_left, camera_bounding_right;
             camera_bounding_left(0) = box.xmin - intrinsic(0,2);
             camera_bounding_left(1) = box.ymin - intrinsic(1,2);
