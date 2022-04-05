@@ -37,7 +37,7 @@ int main(int argc, char **argv)
       box.xmax = 500;
       box.ymin = 100;
       box.ymax = 400;
-      box.Class = "handles";
+      box.Class = "handle";
       box.probability = 1.0;
       msg.header.stamp = image_buf.front()->header.stamp;
       image_buf.pop();

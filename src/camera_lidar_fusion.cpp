@@ -234,23 +234,23 @@ int main(int argc, char **argv)
 
 
       //rgb, scan, bounding box time sync 1.0 s
-      if (time_r < time_s - 1)
+      if (time_r < time_s - 0.05)
       {
         image_buf.pop();
         ROS_INFO("pop rgb_image\n");
       }
-      else if (time_r > time_s + 1)
+      else if (time_r > time_s + 0.05)
       {
         scan_buf.pop();
         ROS_INFO("rgb : %f", time_r);
         ROS_INFO("s : %f", time_s);
         ROS_INFO("pop scan\n");
       }
-      else if(time_r < time_b - 1){
+      else if(time_r < time_b - 0.05){
         image_buf.pop();
         ROS_INFO("pop rgb_image\n");
       }
-      else if(time_r > time_b + 1){
+      else if(time_r > time_b + 0.05){
         bounding_buf.pop();
         ROS_INFO("pop bound header\n");
       }
@@ -352,20 +352,20 @@ int main(int argc, char **argv)
           door_angle::BoundingBox box;
           box = boxes.bounding_boxes[0];
           if( box.Class == "door"){
-            ROS_INFO("handle!");
+            ROS_INFO("door!");
             continue;
           }
           else if( box.Class == "handle"){
-            std::cout << "door!!!!" << std::endl;
+            std::cout << "handle!!!!" << std::endl;
             Eigen::Vector4d camera_origin = Eigen::Vector4d::Zero();
             Eigen::Vector4d camera_bounding_left, camera_bounding_right;
-            camera_bounding_left(0) = box.xmin + intrinsic(0,2);
-            camera_bounding_left(1) = box.ymin + intrinsic(1,2);
+            camera_bounding_left(0) = box.xmin - intrinsic(0,2);
+            camera_bounding_left(1) = box.ymin - intrinsic(1,2);
             camera_bounding_left(2) = 1.0;
             camera_bounding_left(3) = 1.0; // homogeneous
 
-            camera_bounding_right(0) = box.xmax + intrinsic(0,2);
-            camera_bounding_right(1) = box.ymin + intrinsic(1,2);
+            camera_bounding_right(0) = box.xmax - intrinsic(0,2);
+            camera_bounding_right(1) = box.ymin - intrinsic(1,2);
             camera_bounding_right(2) = 1.0;
             camera_bounding_right(3) = 1.0; // homogeneous
 
