@@ -426,9 +426,9 @@ int main(int argc, char **argv)
                   point.x = static_cast<float>(scanPoints[i].x());
                   point.y = static_cast<float>(scanPoints[i].y());
                   point.z = 0;
-                  point.b = 0;
+                  point.b = 255;
                   point.g = 0;
-                  point.r = 255;
+                  point.r = 0;
 
                   cloud.push_back(point);
                   //cloud.
@@ -441,8 +441,8 @@ int main(int argc, char **argv)
                   point.y = static_cast<float>(scanPoints[i].y());
                   point.z = 0;
                   point.b = 0;
-                  point.g = 0;
-                  point.r = 255;
+                  point.g = 255;
+                  point.r = 0;
 
                   cloud.push_back(point);
                   //cloud.
