@@ -341,9 +341,7 @@ int main(int argc, char **argv)
           //s2iPoints.push_back(point_uv);
         }
 
-        sensor_msgs::Image fusion_image;
-        cv_bridge = cv_bridge::CvImage(header, sensor_msgs::image_encodings::BGR8, image);
-        cv_bridge.toImageMsg(fusion_image);
+
 
         // bouding box fusion process
         pcl::PointCloud<pcl::PointXYZRGB> cloud;
@@ -421,7 +419,7 @@ int main(int argc, char **argv)
             for(unsigned long i = 0; i < scanPoints.size(); i++){
               // scan point between plane contain lines from bounding box left Y, right Y, They are  perpendicular to the floor
               if( (-a1 * b1) > 0  && (-a2 * b2) > 0){
-                if( (-a1 * scanPoints[i].x() - c1) / b1 < scanPoints[i].y() && (-a2 * scanPoints[i].x() - c2) / b2 > scanPoints[i].y() ){
+                if( (-a1 * scanPoints[i].x() - c1) / b1 > scanPoints[i].y() && (-a2 * scanPoints[i].x() - c2) / b2 < scanPoints[i].y() ){
 
                   point.x = static_cast<float>(scanPoints[i].x());
                   point.y = static_cast<float>(scanPoints[i].y());
@@ -435,7 +433,7 @@ int main(int argc, char **argv)
                 }
               }
               else if( (-a1 * b1) < 0  && (-a2 * b2) > 0){
-                if( (-a1 * scanPoints[i].x() - c1) / b1 > scanPoints[i].y() && (-a2 * scanPoints[i].x() - c2) / b2 > scanPoints[i].y() ){
+                if( (-a1 * scanPoints[i].x() - c1) / b1 < scanPoints[i].y() && (-a2 * scanPoints[i].x() - c2) / b2 < scanPoints[i].y() ){
 
                   point.x = static_cast<float>(scanPoints[i].x());
                   point.y = static_cast<float>(scanPoints[i].y());
@@ -449,7 +447,7 @@ int main(int argc, char **argv)
                 }
               }
               else if( (-a1 * b1) < 0  && (-a2 * b2) < 0){
-                if( (-a1 * scanPoints[i].x() - c1) / b1 > scanPoints[i].y() && (-a2 * scanPoints[i].x() - c2) / b2 < scanPoints[i].y() ){
+                if( (-a1 * scanPoints[i].x() - c1) / b1 < scanPoints[i].y() && (-a2 * scanPoints[i].x() - c2) / b2 > scanPoints[i].y() ){
 
                   point.x = static_cast<float>(scanPoints[i].x());
                   point.y = static_cast<float>(scanPoints[i].y());
@@ -469,6 +467,9 @@ int main(int argc, char **argv)
             continue;
           }
         }
+        sensor_msgs::Image fusion_image;
+        cv_bridge = cv_bridge::CvImage(header, sensor_msgs::image_encodings::BGR8, image);
+        cv_bridge.toImageMsg(fusion_image);
 
         //publish fusion image
         fusion_image_pub.publish(fusion_image);
