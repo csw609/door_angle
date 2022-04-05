@@ -27,7 +27,7 @@ int main(int argc, char **argv)
   ros::Publisher chatter_pub = nh.advertise<door_angle::BoundingBoxes>("/bounding_box_array", 1000);
   ros::Subscriber image_sub = nh.subscribe(image_topic, 1000, imgCallback);
 
-  ros::Rate loop_rate(20);
+  ros::Rate loop_rate(60);
   while (ros::ok())
   {
     if(!image_buf.empty()){

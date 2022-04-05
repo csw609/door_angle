@@ -294,7 +294,7 @@ int main(int argc, char **argv)
         for(unsigned long i = 0; i < scan.ranges.size(); i++){
           if(static_cast<double>(scan.ranges[i]) < 0.3) continue;
           double angle = min_angle + diff_angle * i;
-          if(angle < -3.1415926535 / 2 && angle > 3.1415926535 / 2) continue;
+          if(angle < -3.1415926535 / 2 || angle > 3.1415926535 / 2) continue;
 
           //ROS_INFO("angle : %f",angle);
           // get lidar point
@@ -304,7 +304,7 @@ int main(int argc, char **argv)
           point_l(2) = 0.0; // z
           point_l(3) = 1.0;
 
-          //scanPoints.push_back(point_l);
+          scanPoints.push_back(point_l);
           // frame convert
           // lidar => base_link frame => camera
           Eigen::Vector4d point_c;
@@ -383,23 +383,51 @@ int main(int argc, char **argv)
 
             double a1 = vLeft(0);
             double b1 = vLeft(1);
-
-            double c  = - a1 * camera_origin_l(0) + - b1 * camera_origin_l(1);
+            double c1  = - a1 * camera_origin_l(0) + - b1 * camera_origin_l(1);
 
             double a2 = vRight(0);
             double b2 = vRight(1);
+            double c2  = - a2 * camera_origin_l(0) + - b2 * camera_origin_l(1);
 
             for(unsigned long i = 0; i < scanPoints.size(); i++){
               // scan point between plane contain lines from bounding box left Y, right Y, They are  perpendicular to the floor
-              if(a1 * scanPoints[i].x() + b1 * scanPoints[i].y() + c > 0){  // => wrong
-                if(a2 * scanPoints[i].x() + b2 * scanPoints[i].y() + c > 0){ // => wrong
+              if( (-a1 * b1) > 0  && (-a2 * b2) > 0){
+                if( (-a1 * scanPoints[i].x() - c1) / b1 < scanPoints[i].y() && (-a2 * scanPoints[i].x() - c2) / b2 > scanPoints[i].y() ){
 
                   point.x = static_cast<float>(scanPoints[i].x());
                   point.y = static_cast<float>(scanPoints[i].y());
                   point.z = 0;
-                  point.b = 255;
+                  point.b = 0;
                   point.g = 0;
-                  point.r = 0;
+                  point.r = 255;
+
+                  cloud.push_back(point);
+                  //cloud.
+                }
+              }
+              else if( (-a1 * b1) < 0  && (-a2 * b2) > 0){
+                if( (-a1 * scanPoints[i].x() - c1) / b1 > scanPoints[i].y() && (-a2 * scanPoints[i].x() - c2) / b2 > scanPoints[i].y() ){
+
+                  point.x = static_cast<float>(scanPoints[i].x());
+                  point.y = static_cast<float>(scanPoints[i].y());
+                  point.z = 0;
+                  point.b = 0;
+                  point.g = 0;
+                  point.r = 255;
+
+                  cloud.push_back(point);
+                  //cloud.
+                }
+              }
+              else if( (-a1 * b1) < 0  && (-a2 * b2) < 0){
+                if( (-a1 * scanPoints[i].x() - c1) / b1 > scanPoints[i].y() && (-a2 * scanPoints[i].x() - c2) / b2 < scanPoints[i].y() ){
+
+                  point.x = static_cast<float>(scanPoints[i].x());
+                  point.y = static_cast<float>(scanPoints[i].y());
+                  point.z = 0;
+                  point.b = 0;
+                  point.g = 0;
+                  point.r = 255;
 
                   cloud.push_back(point);
                   //cloud.
