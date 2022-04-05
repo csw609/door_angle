@@ -294,7 +294,7 @@ int main(int argc, char **argv)
         for(unsigned long i = 0; i < scan.ranges.size(); i++){
           if(static_cast<double>(scan.ranges[i]) < 0.3) continue;
           double angle = min_angle + diff_angle * i;
-          if(angle > -3.1415926535 / 2 && angle < 3.1415926535 / 2) continue;
+
 
           //ROS_INFO("angle : %f",angle);
           // get lidar point
@@ -327,10 +327,21 @@ int main(int argc, char **argv)
           // draw lidar point on image
           int r = static_cast<int>(point_uv(1));
           int c = static_cast<int>(point_uv(0));
-          if(r > 0 && r < image.rows && c > 0 && c < image.cols){
-            image.at<cv::Vec3b>(r,c)[0] = 255;
-            image.at<cv::Vec3b>(r,c)[1] = 255;
-            image.at<cv::Vec3b>(r,c)[2] = 255;
+          if(r > 1 && r < image.rows-1 && c > 1 && c < image.cols-1){
+            for(int j = r-1; j < r+2; j++){
+              for(int k = c - 1; k < c+2; k++){
+                if(angle > -3.1415926535 / 2 && angle < 3.1415926535 / 2){
+                  image.at<cv::Vec3b>(j,k)[0] = 255;
+                  image.at<cv::Vec3b>(j,k)[1] = 0;
+                  image.at<cv::Vec3b>(j,k)[2] = 0;
+                }
+                else{
+                  image.at<cv::Vec3b>(j,k)[0] = 255;
+                  image.at<cv::Vec3b>(j,k)[1] = 255;
+                  image.at<cv::Vec3b>(j,k)[2] = 255;
+                }
+              }
+            }
           }
 
           //scan to image point
