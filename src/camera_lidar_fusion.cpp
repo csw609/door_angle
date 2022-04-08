@@ -294,7 +294,7 @@ int main(int argc, char **argv)
         for(unsigned long i = 0; i < scan.ranges.size(); i++){
           if(static_cast<double>(scan.ranges[i]) < 0.3) continue;
           double angle = min_angle + diff_angle * i;
-          if(angle < -3.1415926535 / 2 || angle > 3.1415926535 / 2) continue;
+          //if(angle < -3.1415926535 / 2 || angle > 3.1415926535 / 2) continue;
 
           //ROS_INFO("angle : %f",angle);
           // get lidar point
@@ -386,13 +386,13 @@ int main(int argc, char **argv)
             camera_origin(3) = 1.0; // homogeneous
 
             Eigen::Vector4d camera_bounding_left, camera_bounding_right;
-            camera_bounding_left(0) = box.xmin - intrinsic(0,2);
-            camera_bounding_left(1) = box.ymin - intrinsic(1,2);
+            camera_bounding_left(0) = (box.xmin - intrinsic(0,2)) / intrinsic(0,0);
+            camera_bounding_left(1) = (box.ymin - intrinsic(1,2)) / intrinsic(1,1) ;
             camera_bounding_left(2) = 1.0;
             camera_bounding_left(3) = 1.0; // homogeneous
 
-            camera_bounding_right(0) = box.xmax - intrinsic(0,2);
-            camera_bounding_right(1) = box.ymin - intrinsic(1,2);
+            camera_bounding_right(0) = (box.xmax - intrinsic(0,2)) / intrinsic(0,0);
+            camera_bounding_right(1) = (box.ymin - intrinsic(1,2)) / intrinsic(1,1);
             camera_bounding_right(2) = 1.0;
             camera_bounding_right(3) = 1.0; // homogeneous
 
@@ -401,64 +401,94 @@ int main(int argc, char **argv)
             Eigen::Vector4d camera_bounding_left_l = Tb2l * Tc2b * camera_bounding_left;
             Eigen::Vector4d camera_bounding_right_l = Tb2l * Tc2b * camera_bounding_right;
 
-            Eigen::Vector2d vLeft, vRight;
-            vLeft(0) = camera_bounding_left_l(0) - camera_origin_l(0);
-            vLeft(1) = camera_bounding_left_l(1) - camera_origin_l(1);
+            //Eigen::Vector2d vLeft, vRight;
+            double x_diff_left = camera_bounding_left_l(0) - camera_origin_l(0);
+            double y_diff_left = camera_bounding_left_l(1) - camera_origin_l(1);
 
-            vRight(0) = camera_bounding_right_l(0) - camera_origin_l(0);
-            vRight(1) = camera_bounding_right_l(1) - camera_origin_l(1);
+            double x_diff_right = camera_bounding_right_l(0) - camera_origin_l(0);
+            double y_diff_right = camera_bounding_right_l(1) - camera_origin_l(1);
 
-            double a1 = vLeft(0);
-            double b1 = vLeft(1);
-            double c1  = - a1 * camera_origin_l(0) + - b1 * camera_origin_l(1);
+            double a1 = y_diff_left / x_diff_left;
+            double b1 = camera_bounding_left_l(1) - a1 * camera_bounding_left_l(0);
+            // double c1  = - a1 * camera_origin_l(0) - b1 * camera_origin_l(1);
+            //double c1  = - a1 * camera_bounding_left_l(0) - b1 * camera_bounding_left_l(1);
 
-            double a2 = vRight(0);
-            double b2 = vRight(1);
-            double c2  = - a2 * camera_origin_l(0) + - b2 * camera_origin_l(1);
+            double a2 = y_diff_right / x_diff_right;
+            double b2 = camera_bounding_right_l(1) - a2 * camera_bounding_right_l(0);
+            // double c2  = - a2 * camera_origin_l(0) - b2 * camera_origin_l(1);
+            //double c2  = - a2 * camera_bounding_right_l(0) - b2 * camera_bounding_right_l(1);
 
+
+            //std::cout << "a1 : " << a1 << " b1 : " << b1 << std::endl;
+            //std::cout << "a2 : " << a2 << " b2 : " << b2 << std::endl;
             for(unsigned long i = 0; i < scanPoints.size(); i++){
               // scan point between plane contain lines from bounding box left Y, right Y, They are  perpendicular to the floor
-              if( (-a1 * b1) > 0  && (-a2 * b2) > 0){
-                if( (-a1 * scanPoints[i].x() - c1) / b1 > scanPoints[i].y() && (-a2 * scanPoints[i].x() - c2) / b2 < scanPoints[i].y() ){
+//              if( a1 < 0  && a2 < 0){
+              if( (a1 * scanPoints[i](0) + b1) > scanPoints[i](1) && (a2 * scanPoints[i](0) + b2) < scanPoints[i](1) ){
 
-                  point.x = static_cast<float>(scanPoints[i].x());
-                  point.y = static_cast<float>(scanPoints[i].y());
-                  point.z = 0;
-                  point.b = 255;
-                  point.g = 0;
-                  point.r = 0;
+                point.x = static_cast<float>(scanPoints[i](0));
+                point.y = static_cast<float>(scanPoints[i](1));
+                point.z = 0;
+                point.b = 255;
+                point.g = 0;
+                point.r = 0;
 
-                  cloud.push_back(point);
-                  //cloud.
-                }
+                cloud.push_back(point);
+                //cloud.
               }
-              else if( (-a1 * b1) < 0  && (-a2 * b2) > 0){
-                if( (-a1 * scanPoints[i].x() - c1) / b1 < scanPoints[i].y() && (-a2 * scanPoints[i].x() - c2) / b2 < scanPoints[i].y() ){
+//              }
+//              else if( a1 > 0  && a2 < 0){
+//                if( (a1 * scanPoints[i](0) + b1) > scanPoints[i](1) && (a2 * scanPoints[i](0) + b2) < scanPoints[i](1) ){
 
-                  point.x = static_cast<float>(scanPoints[i].x());
-                  point.y = static_cast<float>(scanPoints[i].y());
-                  point.z = 0;
-                  point.b = 0;
-                  point.g = 255;
-                  point.r = 0;
+//                  point.x = static_cast<float>(scanPoints[i](0));
+//                  point.y = static_cast<float>(scanPoints[i](1));
+//                  point.z = 0;
+//                  point.b = 0;
+//                  point.g = 255;
+//                  point.r = 0;
 
-                  cloud.push_back(point);
-                  //cloud.
-                }
-              }
-              else if( (-a1 * b1) < 0  && (-a2 * b2) < 0){
-                if( (-a1 * scanPoints[i].x() - c1) / b1 < scanPoints[i].y() && (-a2 * scanPoints[i].x() - c2) / b2 > scanPoints[i].y() ){
+//                  cloud.push_back(point);
+//                  //cloud.
+//                }
+//              }
+//              else if( a1 < 0  && a2 < 0){
+//                if( (a1 * scanPoints[i](0) + b1) < scanPoints[i](1) && (a2 * scanPoints[i](0) + b2) > scanPoints[i](1) ){
 
-                  point.x = static_cast<float>(scanPoints[i].x());
-                  point.y = static_cast<float>(scanPoints[i].y());
-                  point.z = 0;
-                  point.b = 0;
-                  point.g = 0;
-                  point.r = 255;
+//                  point.x = static_cast<float>(scanPoints[i](0));
+//                  point.y = static_cast<float>(scanPoints[i](1));
+//                  point.z = 0;
+//                  point.b = 0;
+//                  point.g = 0;
+//                  point.r = 255;
 
-                  cloud.push_back(point);
-                  //cloud.
-                }
+//                  cloud.push_back(point);
+//                  //cloud.
+//                }
+//              }
+
+              // vector visualization DEBUG
+              for(int i = -200; i < 200; i++){
+                double x_deb = static_cast<double>(i) / 10.0;
+                double y_deb1 = (a1 * x_deb + b1);
+                double y_deb2 = (a2 * x_deb + b2);
+
+                point.x = static_cast<float>(x_deb);
+                point.y = static_cast<float>(y_deb1);
+                point.z = 0;
+                point.b = 255;
+                point.g = 255;
+                point.r = 0;
+
+                cloud.push_back(point);
+
+                point.x = static_cast<float>(x_deb);
+                point.y = static_cast<float>(y_deb2);
+                point.z = 0;
+                point.b = 255;
+                point.g = 0;
+                point.r = 255;
+
+                cloud.push_back(point);
               }
             }
           }
