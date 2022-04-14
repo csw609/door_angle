@@ -11,6 +11,9 @@
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Geometry>
 
+#include "door_angle/DoorPose.h"
+#include "door_angle/DoorPoses.h"
+
 
 void door_write(){
   std::string pkg_path = ros::package::getPath("door_angle");

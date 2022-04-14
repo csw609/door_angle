@@ -22,7 +22,7 @@ find_package(catkin REQUIRED COMPONENTS
 find_package (OpenCV 3.2.0 REQUIRED)
 #find_package(Eigen3 REQUIRED)
 
-add_message_files(FILES bounding.msg BoundingBox.msg BoundingBoxes.msg)
+add_message_files(FILES bounding.msg BoundingBox.msg BoundingBoxes.msg DoorPose.msg DoorPoses.msg)
 
 generate_messages(
   DEPENDENCIES
@@ -54,3 +54,6 @@ target_link_libraries(storage_ ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
 add_executable(camera_lidar_fusion src/camera_lidar_fusion.cpp)
 target_link_libraries(camera_lidar_fusion ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES})
+
+add_executable(door_register src/door_register.cpp)
+target_link_libraries(door_register ${catkin_LIBRARIES} ${OpenCV_LIBS})

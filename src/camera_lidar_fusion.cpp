@@ -1,6 +1,7 @@
 #include "ros/ros.h"
 #include "std_msgs/String.h"
 #include <queue>
+#include <deque>
 
 #include "sensor_msgs/LaserScan.h"
 #include "sensor_msgs/Image.h"
@@ -14,17 +15,21 @@
 
 #include "door_angle/BoundingBox.h"
 #include "door_angle/BoundingBoxes.h"
+#include "door_angle/DoorPose.h"
+#include "door_angle/DoorPoses.h"
 
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/PCLPointCloud2.h>
 #include <pcl/point_types.h>
-#include <pcl/sample_consensus/method_types.h>
-#include <pcl/sample_consensus/model_types.h>
-#include <pcl/segmentation/sac_segmentation.h>
+#include <pcl/sample_consensus/ransac.h>
+#include <pcl/sample_consensus/sac_model_line.h>
 
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Geometry>
+
+#include <time.h>
+#include <stdlib.h>
 
 std::queue<sensor_msgs::ImageConstPtr>         image_buf;
 std::queue<sensor_msgs::LaserScanConstPtr>     scan_buf;
@@ -74,7 +79,8 @@ int main(int argc, char **argv)
 
   // Pub & Sub
   ros::Publisher fusion_image_pub = nh.advertise<sensor_msgs::Image>("fusion_image", 1000);
-  ros::Publisher cloud_door_pub    = nh.advertise<sensor_msgs::PointCloud2>("/cloud_door", 1000);
+  ros::Publisher cloud_door_pub   = nh.advertise<sensor_msgs::PointCloud2>("/cloud_door", 1000);
+  ros::Publisher door_poses_pub   = nh.advertise<door_angle::DoorPoses>("/door_poses", 1000);
 
   ros::Subscriber image_sub = nh.subscribe(image_topic, 1000, imgCallback);
   ros::Subscriber bouding_box_sub = nh.subscribe(bounding_topic,1000, boundCallback);
@@ -234,27 +240,28 @@ int main(int argc, char **argv)
 
 
       //rgb, scan, bounding box time sync 1.0 s
-      if (time_r < time_s - 0.05)
-      {
-        image_buf.pop();
-        ROS_INFO("pop rgb_image\n");
-      }
-      else if (time_r > time_s + 0.05)
-      {
-        scan_buf.pop();
-        ROS_INFO("rgb : %f", time_r);
-        ROS_INFO("s : %f", time_s);
-        ROS_INFO("pop scan\n");
-      }
-      else if(time_r < time_b - 0.05){
-        image_buf.pop();
-        ROS_INFO("pop rgb_image\n");
-      }
-      else if(time_r > time_b + 0.05){
-        bounding_buf.pop();
-        ROS_INFO("pop bound header\n");
-      }
-      else if(!bounding_buf.front()->bounding_boxes.empty())  //bounding box not empty && satisfy time sync
+//      if (time_r < time_s - 0.05)
+//      {
+//        image_buf.pop();
+//        ROS_INFO("pop rgb_image\n");
+//      }
+//      else if (time_r > time_s + 0.05)
+//      {
+//        scan_buf.pop();
+//        ROS_INFO("rgb : %f", time_r);
+//        ROS_INFO("s : %f", time_s);
+//        ROS_INFO("pop scan\n");
+//      }
+//      else if(time_r < time_b - 0.05){
+//        image_buf.pop();
+//        ROS_INFO("pop rgb_image\n");
+//      }
+//      else if(time_r > time_b + 0.05){
+//        bounding_buf.pop();
+//        ROS_INFO("pop bound header\n");
+//      }
+//      else
+        if(!bounding_buf.front()->bounding_boxes.empty())  //bounding box not empty && satisfy time sync
       {
         time = image_buf.front()->header.stamp.toSec();
 
@@ -294,7 +301,7 @@ int main(int argc, char **argv)
         for(unsigned long i = 0; i < scan.ranges.size(); i++){
           if(static_cast<double>(scan.ranges[i]) < 0.3) continue;
           double angle = min_angle + diff_angle * i;
-          //if(angle < -3.1415926535 / 2 || angle > 3.1415926535 / 2) continue;
+          if(angle < -3.1415926535 / 2 || angle > 3.1415926535 / 2) continue;
 
           //ROS_INFO("angle : %f",angle);
           // get lidar point
@@ -345,20 +352,25 @@ int main(int argc, char **argv)
 
         // bouding box fusion process
         pcl::PointCloud<pcl::PointXYZRGB> cloud;
+        door_angle::DoorPoses doorPoses;
         pcl::PointXYZRGB point;
+
         for(unsigned long i = 0; i < boxes.bounding_boxes.size(); i++){
           door_angle::BoundingBox box;
           box = boxes.bounding_boxes[0];
-          if( box.Class == "door"){
-            ROS_INFO("door!");
+          if( box.Class == "handle"){
+            ROS_INFO("handle");
             continue;
           }
-          else if( box.Class == "handle"){
-            std::cout << "handle!!!!" << std::endl;
+          else if( box.Class == "door"){
+            //pcl::PointCloud<pcl::PointXYZRGB> handleCloud;
+            std::vector<Eigen::Vector2d> vecHandle;
+            std::cout << "door!!!!" << std::endl;
             int xmin = static_cast<int>(box.xmin);
             int xmax = static_cast<int>(box.xmax);
             int ymin = static_cast<int>(box.ymin);
             int ymax = static_cast<int>(box.ymax);
+
             // bouding box visualize
             for(int c = xmin; c < xmax; c++){
               image.at<cv::Vec3b>(ymin,c)[0] = 0;
@@ -423,7 +435,7 @@ int main(int argc, char **argv)
             //std::cout << "a2 : " << a2 << " b2 : " << b2 << std::endl;
             for(unsigned long i = 0; i < scanPoints.size(); i++){
               // scan point between plane contain lines from bounding box left Y, right Y, They are  perpendicular to the floor
-//              if( a1 < 0  && a2 < 0){
+              //              if( a1 < 0  && a2 < 0){
               if( (a1 * scanPoints[i](0) + b1) > scanPoints[i](1) && (a2 * scanPoints[i](0) + b2) < scanPoints[i](1) ){
 
                 point.x = static_cast<float>(scanPoints[i](0));
@@ -433,38 +445,16 @@ int main(int argc, char **argv)
                 point.g = 0;
                 point.r = 0;
 
+                Eigen::Vector2d point2d;
+                point2d(0) = static_cast<double>(point.x);
+                point2d(1) = static_cast<double>(point.y);
+
+
+                vecHandle.push_back(point2d);
+                //handleCloud.push_back(point);
                 cloud.push_back(point);
                 //cloud.
               }
-//              }
-//              else if( a1 > 0  && a2 < 0){
-//                if( (a1 * scanPoints[i](0) + b1) > scanPoints[i](1) && (a2 * scanPoints[i](0) + b2) < scanPoints[i](1) ){
-
-//                  point.x = static_cast<float>(scanPoints[i](0));
-//                  point.y = static_cast<float>(scanPoints[i](1));
-//                  point.z = 0;
-//                  point.b = 0;
-//                  point.g = 255;
-//                  point.r = 0;
-
-//                  cloud.push_back(point);
-//                  //cloud.
-//                }
-//              }
-//              else if( a1 < 0  && a2 < 0){
-//                if( (a1 * scanPoints[i](0) + b1) < scanPoints[i](1) && (a2 * scanPoints[i](0) + b2) > scanPoints[i](1) ){
-
-//                  point.x = static_cast<float>(scanPoints[i](0));
-//                  point.y = static_cast<float>(scanPoints[i](1));
-//                  point.z = 0;
-//                  point.b = 0;
-//                  point.g = 0;
-//                  point.r = 255;
-
-//                  cloud.push_back(point);
-//                  //cloud.
-//                }
-//              }
 
               // vector visualization DEBUG
               for(int i = -200; i < 200; i++){
@@ -491,8 +481,65 @@ int main(int argc, char **argv)
                 cloud.push_back(point);
               }
             }
-          }
 
+
+            // calculate angle
+            // RANSAC
+            if(vecHandle.size() > 3){
+              double threshHold = 0.1; // parameter!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+              int vecSize = static_cast<int>(vecHandle.size());
+
+              int count = 20;
+              srand(std::time(NULL));
+
+              int maxInlierNum = 0;
+              std::deque<int> dqMaxInlier;
+              double maxA;
+              double maxB;
+
+              for(int i = 0; i < count; i++){
+                unsigned long firstIndex = static_cast<unsigned long>(rand() % vecSize);
+                unsigned long secondIndex = static_cast<unsigned long>(rand() % vecSize);
+
+                if(firstIndex == secondIndex){
+                  i--;
+                  continue;
+                }
+
+                double a = ( vecHandle[firstIndex](1) - vecHandle[secondIndex](1) ) / ( vecHandle[firstIndex](0) - vecHandle[secondIndex](0) );
+                double b = vecHandle[firstIndex](1) - a * vecHandle[firstIndex](0);
+                double deno = std::sqrt(a*a + 1.0);
+
+                std::deque<int> dqInlier;
+                for(int j = 0; j < vecSize; j++){
+                  if( ((a*vecHandle[j](0) -   vecHandle[j](1) + b ) / deno) <= threshHold){
+                    dqInlier.push_front(j);
+                  }
+                }
+
+                if(maxInlierNum < static_cast<int>(dqInlier.size())){
+                  maxInlierNum = static_cast<int>(dqInlier.size());
+                  dqMaxInlier = dqInlier;
+                  maxA = a;
+                  maxB = b;
+                }
+              }
+
+              if(dqMaxInlier.size() > 1){
+                door_angle::DoorPose doorPose;
+
+                int index1 = dqMaxInlier.front();
+                int index2 = dqMaxInlier.back();
+
+                doorPose.x1 = static_cast<float>(vecHandle[index1](0));
+                doorPose.y1 = static_cast<float>(vecHandle[index1](1));
+                doorPose.x2 = static_cast<float>(vecHandle[index2](0));
+                doorPose.y2 = static_cast<float>(vecHandle[index2](1));
+                std::cout << "a : " << maxA << ", b : " << maxB << std::endl;
+                doorPoses.door_poses.push_back(doorPose);
+              }
+            }
+          }
           else{
             continue;
           }
@@ -508,6 +555,9 @@ int main(int argc, char **argv)
         pcl::toROSMsg(cloud, cloudmsg); //convert pcl::PointCloud<pcl::PointXYZRGB> to sensor_msgs::PointCloud2
         cloudmsg.header.frame_id = "base_footprint";
         cloud_door_pub.publish(cloudmsg);
+
+        //publish door poses
+        door_poses_pub.publish(doorPoses);
 
       }
     }
