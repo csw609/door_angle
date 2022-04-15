@@ -33,12 +33,14 @@ int main(int argc, char **argv)
     if(!image_buf.empty()){
       door_angle::BoundingBoxes msg;
       door_angle::BoundingBox box;
+
       box.xmin = 100;
       box.xmax = 500;
       box.ymin = 100;
       box.ymax = 400;
       box.Class = "door";
       box.probability = 1.0;
+
       msg.header.stamp = image_buf.front()->header.stamp;
       image_buf.pop();
       msg.header.frame_id = "camera";

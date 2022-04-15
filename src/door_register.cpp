@@ -43,6 +43,19 @@ void doorCallback(const door_angle::DoorPosesPtr& doors)
     }
     // no overlapped
     if(!overlap){
+      std::string pkg_path = ros::package::getPath("door_angle");
+      std::string filePath = pkg_path + "/obj/door.yaml";
+
+      cv::FileStorage fsOut(filePath, cv::FileStorage::APPEND);
+
+      fsOut << "door" + std::to_string(vecDoor.size()+1);
+      fsOut << "{" << "x1" << doorPose.x1
+                   << "y1" << doorPose.y1
+                   << "x2" << doorPose.x2
+                   << "y2" << doorPose.y2 << "}";
+
+      fsOut.release();
+
       vecDoor.push_back(doorPose);
     }
   }
@@ -52,6 +65,7 @@ void doorCallback(const door_angle::DoorPosesPtr& doors)
 
 int main(int argc, char **argv)
 {
+  //writing part need!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!￩
   ros::init(argc, argv, "door_register");
   ros::NodeHandle nh;
 
@@ -61,6 +75,7 @@ int main(int argc, char **argv)
 
   visualization_msgs::MarkerArray markerArr;
   visualization_msgs::Marker marker;
+  marker.header.frame_id = "map";
 
   std::string pkg_path = ros::package::getPath("door_angle");
   std::string filePath = pkg_path + "/obj/door.yaml";
@@ -68,10 +83,10 @@ int main(int argc, char **argv)
 
   cv::FileStorage fsSettings(filePath, cv::FileStorage::READ);
   std::cout << fsSettings.isOpened() << std::endl;
-  int count = 1;
+
 
   while(true){
-    std::string cnt = "door" + std::to_string(count);
+    std::string cnt = "door" + std::to_string(vecDoor.size()+1);
     std::cout << cnt << std::endl;
     cv::FileNode door_pos = fsSettings[cnt];
     if(door_pos.empty()){
@@ -91,7 +106,6 @@ int main(int argc, char **argv)
 
       //double door_angle_rad = std::atan2(static_cast<double>(doorRead.y2-doorRead.y1),static_cast<double>(doorRead.x2-doorRead.x1));
       //std::cout << "door angle : " << door_angle_rad << std::endl;
-      count++;
     }
   }
 
@@ -136,7 +150,7 @@ int main(int argc, char **argv)
         marker.pose.orientation.z = q.z();
         marker.pose.orientation.w = q.w();
 
-        marker.scale.x = std::abs(x1-x2);
+        marker.scale.x = (std::abs(x1-x2) + std::abs(y1-y2) ) * 0.5;
         marker.scale.y = 0.1;
         marker.scale.z = marker.pose.position.z * 2.0;
 

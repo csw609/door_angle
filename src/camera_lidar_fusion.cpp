@@ -355,6 +355,7 @@ int main(int argc, char **argv)
         door_angle::DoorPoses doorPoses;
         pcl::PointXYZRGB point;
 
+        // probability threshhold need!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         for(unsigned long i = 0; i < boxes.bounding_boxes.size(); i++){
           door_angle::BoundingBox box;
           box = boxes.bounding_boxes[0];
