@@ -531,6 +531,8 @@ int main(int argc, char **argv)
                 int index1 = dqMaxInlier.front();
                 int index2 = dqMaxInlier.back();
 
+                // convert coordinate !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
                 doorPose.x1 = static_cast<float>(vecHandle[index1](0));
                 doorPose.y1 = static_cast<float>(vecHandle[index1](1));
                 doorPose.x2 = static_cast<float>(vecHandle[index2](0));

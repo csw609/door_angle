@@ -2,18 +2,21 @@
 #include <ros/package.h>
 
 #include "std_msgs/String.h"
+#include "visualization_msgs/Marker.h"
+#include "visualization_msgs/MarkerArray.h"
 
 #include <opencv2/opencv.hpp>
 
 #include "door_angle/DoorPose.h"
 #include "door_angle/DoorPoses.h"
 
+#include <eigen3/Eigen/Core>
+#include <eigen3/Eigen/Geometry>
+
 #include <iostream>
 #include <vector>
 
 std::vector<door_angle::DoorPose> vecDoor;
-
-
 
 void doorCallback(const door_angle::DoorPosesPtr& doors)
 {
@@ -38,13 +41,12 @@ void doorCallback(const door_angle::DoorPosesPtr& doors)
         break;
       }
     }
-
     // no overlapped
     if(!overlap){
       vecDoor.push_back(doorPose);
     }
-
   }
+
   return;
 }
 
@@ -54,6 +56,11 @@ int main(int argc, char **argv)
   ros::NodeHandle nh;
 
   ros::Subscriber sub = nh.subscribe("/door_poses", 1000, doorCallback);
+
+  ros::Publisher markerArr_pub = nh.advertise<visualization_msgs::MarkerArray>("/door_marker", 1000);
+
+  visualization_msgs::MarkerArray markerArr;
+  visualization_msgs::Marker marker;
 
   std::string pkg_path = ros::package::getPath("door_angle");
   std::string filePath = pkg_path + "/obj/door.yaml";
@@ -91,8 +98,62 @@ int main(int argc, char **argv)
 
   fsSettings.release();
 
+  unsigned long curVecSize  = 0;
+  unsigned long prevVecSize = 0;
 
-  ros::spin();
+  while (ros::ok())
+  {
+    if(curVecSize == prevVecSize){
+      curVecSize = vecDoor.size();
+    }
+    else{
+      for(unsigned long i = prevVecSize; i < curVecSize; i++){
+
+        std::cout << "make marker" << std::endl;
+        double x1 = static_cast<double>(vecDoor[i].x1);
+        double y1 = static_cast<double>(vecDoor[i].y1);
+        double x2 = static_cast<double>(vecDoor[i].x2);
+        double y2 = static_cast<double>(vecDoor[i].y2);
+
+        double door_angle_rad = std::atan2(y2-y1,x2-x1);
+        std::cout << "door angle : " << door_angle_rad << std::endl;
+
+
+        marker.id = static_cast<int>(i);
+        marker.header.stamp = ros::Time::now();
+        marker.type = visualization_msgs::Marker::CUBE;
+        marker.action = visualization_msgs::Marker::ADD;
+
+        marker.pose.position.x = (x1 + x2) / 2.0;
+        marker.pose.position.y = (y1 + y2) / 2.0;
+        marker.pose.position.z = 0.75;
+        Eigen::Quaterniond q;
+        q = Eigen::AngleAxisd(0.0,Eigen::Vector3d::UnitX()) *
+            Eigen::AngleAxisd(0.0,Eigen::Vector3d::UnitY()) *
+            Eigen::AngleAxisd(door_angle_rad,Eigen::Vector3d::UnitZ());
+        marker.pose.orientation.x = q.x();
+        marker.pose.orientation.y = q.y();
+        marker.pose.orientation.z = q.z();
+        marker.pose.orientation.w = q.w();
+
+        marker.scale.x = std::abs(x1-x2);
+        marker.scale.y = 0.1;
+        marker.scale.z = marker.pose.position.z * 2.0;
+
+        marker.color.a = 1.0;
+        marker.color.r = 1.0;
+        marker.color.g = 0.0;
+        marker.color.b = 0.0;
+
+        markerArr.markers.push_back(marker);
+
+        prevVecSize = curVecSize;
+      }
+    }
+
+    markerArr_pub.publish(markerArr);
+    ros::spinOnce();
+  }
 
   return 0;
 }
