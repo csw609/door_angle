@@ -31,6 +31,8 @@
 #include <time.h>
 #include <stdlib.h>
 
+#include <time/choi_time.h>
+
 std::queue<sensor_msgs::ImageConstPtr>         image_buf;
 std::queue<sensor_msgs::LaserScanConstPtr>     scan_buf;
 std::queue<door_angle::BoundingBoxesPtr>       bounding_buf;
@@ -137,6 +139,7 @@ int main(int argc, char **argv)
 
   while (ros::ok())
   {
+    seok::TimeChecker dur;
     //receive transform
     if(!tf_received){
 
@@ -573,6 +576,8 @@ int main(int argc, char **argv)
         lack_count = 0;
       }
     }
+
+    dur.interval("loop while once");
 
     ros::spinOnce();
     //loop_rate.sleep();
