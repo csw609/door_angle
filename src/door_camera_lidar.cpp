@@ -111,6 +111,8 @@ int main(int argc, char **argv)
   Tc2b(2,1) = Tb2c(1,2);
   Tc2b(3,3) = 1.0;
 
+  Eigen::Matrix4d Tb2m = Eigen::Matrix4d::Identity();
+
   // Camera Intrinsic
   Eigen::Matrix3d intrinsic;
   for(int i = 0; i < 3; i++){
@@ -139,7 +141,7 @@ int main(int argc, char **argv)
 
   while (ros::ok())
   {
-    seok::TimeChecker dur;
+
     //receive transform
     if(!tf_received){
 
@@ -221,7 +223,7 @@ int main(int argc, char **argv)
         continue;
       }
     }
-
+    seok::TimeChecker dur;
     // If data received
     if (!image_buf.empty() && !scan_buf.empty() && !bounding_buf.empty())
     {
@@ -564,7 +566,7 @@ int main(int argc, char **argv)
 
         //publish door poses
         door_poses_pub.publish(doorPoses);
-
+        dur.interval("loop while once");
       }
     }
 
@@ -577,7 +579,7 @@ int main(int argc, char **argv)
       }
     }
 
-    dur.interval("loop while once");
+
 
     ros::spinOnce();
     //loop_rate.sleep();
