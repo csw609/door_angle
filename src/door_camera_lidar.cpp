@@ -93,10 +93,10 @@ int main(int argc, char **argv)
 
   // Transformation matrix
   Eigen::Matrix4d Tl2b = Eigen::Matrix4d::Identity();
-  Tl2b(2,3) = 0.0;
+  //Tl2b(2,3) = 0.0;
 
   Eigen::Matrix4d Tb2l = Eigen::Matrix4d::Identity();
-  Tb2l(2,3) = -Tl2b(2,3);
+  //Tb2l(2,3) = -Tl2b(2,3);
 
   Eigen::Matrix4d Tb2c = Eigen::Matrix4d::Zero();
   Tb2c(2,0) = 1.0;
@@ -112,6 +112,7 @@ int main(int argc, char **argv)
   Tc2b(3,3) = 1.0;
 
   Eigen::Matrix4d Tb2m = Eigen::Matrix4d::Identity();
+  Eigen::Matrix4d Tm2b = Eigen::Matrix4d::Identity();
 
   // Camera Intrinsic
   Eigen::Matrix3d intrinsic;
@@ -129,13 +130,14 @@ int main(int argc, char **argv)
   // cv
   cv_bridge::CvImage cv_bridge;
 
-  ros::Rate loop_rate(1000);
+  //ros::Rate loop_rate(1000);
 
   int lack_count = 0;
   sensor_msgs::PointCloud2 cloudmsg;
 
   geometry_msgs::TransformStamped tfs2b;
   geometry_msgs::TransformStamped tfc2b;
+  geometry_msgs::TransformStamped tfb2m;
 
   bool tf_received = false;
 
@@ -223,6 +225,43 @@ int main(int argc, char **argv)
         continue;
       }
     }
+    try{
+      tfb2m = tfBuffer.lookupTransform("map", "base_link",
+                                       ros::Time(0));
+
+      Eigen::Quaterniond qb2m;
+      qb2m.x() = tfb2m.transform.rotation.x;
+      qb2m.y() = tfb2m.transform.rotation.y;
+      qb2m.z() = tfb2m.transform.rotation.z;
+      qb2m.w() = tfb2m.transform.rotation.w;
+      Eigen::Matrix3d rb2m = qb2m.normalized().toRotationMatrix();
+      Eigen::Matrix3d rm2b = rb2m.inverse();
+      Eigen::Vector3d vb2m, vm2b;
+      vb2m(0) = tfb2m.transform.translation.x;
+      vb2m(1) = tfb2m.transform.translation.y;
+      vb2m(2) = tfb2m.transform.translation.z;
+      vm2b = -rm2b*vb2m;
+
+      Tb2m(0,0) = rb2m(0,0); Tb2m(0,1) = rb2m(0,1); Tb2m(0,2) = rb2m(0,2);
+      Tb2m(1,0) = rb2m(1,0); Tb2m(1,1) = rb2m(1,1); Tb2m(1,2) = rb2m(1,2);
+      Tb2m(2,0) = rb2m(2,0); Tb2m(2,1) = rb2m(2,1); Tb2m(2,2) = rb2m(2,2);
+      Tb2m(0,3) = tfb2m.transform.translation.x;
+      Tb2m(1,3) = tfb2m.transform.translation.y;
+      Tb2m(2,3) = tfb2m.transform.translation.z;
+
+      Tm2b(0,0) = rm2b(0,0); Tm2b(0,1) = rm2b(0,1); Tm2b(0,2) = rm2b(0,2);
+      Tm2b(1,0) = rm2b(1,0); Tm2b(1,1) = rm2b(1,1); Tm2b(1,2) = rm2b(1,2);
+      Tm2b(2,0) = rm2b(2,0); Tm2b(2,1) = rm2b(2,1); Tm2b(2,2) = rm2b(2,2);
+      Tm2b(0,3) = vm2b(0);
+      Tm2b(1,3) = vm2b(1);
+      Tm2b(2,3) = vm2b(2);
+
+      //std::cout << Tb2m << std::endl;
+    }
+    catch (tf2::TransformException &ex) {
+      //ROS_WARN("%s",ex.what());
+      //continue;
+    }
     seok::TimeChecker dur;
     // If data received
     if (!image_buf.empty() && !scan_buf.empty() && !bounding_buf.empty())
@@ -245,28 +284,27 @@ int main(int argc, char **argv)
 
 
       //rgb, scan, bounding box time sync 1.0 s
-//      if (time_r < time_s - 0.05)
-//      {
-//        image_buf.pop();
-//        ROS_INFO("pop rgb_image\n");
-//      }
-//      else if (time_r > time_s + 0.05)
-//      {
-//        scan_buf.pop();
-//        ROS_INFO("rgb : %f", time_r);
-//        ROS_INFO("s : %f", time_s);
-//        ROS_INFO("pop scan\n");
-//      }
-//      else if(time_r < time_b - 0.05){
-//        image_buf.pop();
-//        ROS_INFO("pop rgb_image\n");
-//      }
-//      else if(time_r > time_b + 0.05){
-//        bounding_buf.pop();
-//        ROS_INFO("pop bound header\n");
-//      }
-//      else
-        if(!bounding_buf.front()->bounding_boxes.empty())  //bounding box not empty && satisfy time sync
+      if (time_r < time_s - 0.05)
+      {
+        image_buf.pop();
+        ROS_INFO("pop rgb_image\n");
+      }
+      else if (time_r > time_s + 0.05)
+      {
+        scan_buf.pop();
+        ROS_INFO("rgb : %f", time_r);
+        ROS_INFO("s : %f", time_s);
+        ROS_INFO("pop scan\n");
+      }
+      else if(time_r < time_b - 0.05){
+        image_buf.pop();
+        ROS_INFO("pop rgb_image\n");
+      }
+      else if(time_r > time_b + 0.05){
+        bounding_buf.pop();
+        ROS_INFO("pop bound header\n");
+      }
+      else if(!bounding_buf.front()->bounding_boxes.empty())  //bounding box not empty && satisfy time sync
       {
         time = image_buf.front()->header.stamp.toSec();
 
@@ -538,11 +576,28 @@ int main(int argc, char **argv)
                 int index2 = dqMaxInlier.back();
 
                 // convert coordinate !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                Eigen::Vector4d handle4d;
 
-                doorPose.x1 = static_cast<float>(vecHandle[index1](0));
-                doorPose.y1 = static_cast<float>(vecHandle[index1](1));
-                doorPose.x2 = static_cast<float>(vecHandle[index2](0));
-                doorPose.y2 = static_cast<float>(vecHandle[index2](1));
+                handle4d(0) = vecHandle[static_cast<unsigned long>(index1)](0);
+                handle4d(1) = vecHandle[static_cast<unsigned long>(index1)](1);
+                handle4d(2) = 0.0;
+                handle4d(3) = 1.0;
+
+                handle4d = Tb2m * Tl2b * handle4d;
+
+                doorPose.x1 = static_cast<float>(handle4d(0));
+                doorPose.y1 = static_cast<float>(handle4d(1));
+
+                handle4d(0) = vecHandle[static_cast<unsigned long>(index2)](0);
+                handle4d(1) = vecHandle[static_cast<unsigned long>(index2)](1);
+                handle4d(2) = 0.0;
+                handle4d(3) = 1.0;
+
+                handle4d = Tb2m * Tl2b * handle4d;
+
+                doorPose.x2 = static_cast<float>(handle4d(0));
+                doorPose.y2 = static_cast<float>(handle4d(1));
+
                 std::cout << "a : " << maxA << ", b : " << maxB << std::endl;
                 doorPoses.door_poses.push_back(doorPose);
               }
