@@ -58,3 +58,6 @@ target_link_libraries(door_camera_lidar ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL
 
 add_executable(door_register src/door_register.cpp)
 target_link_libraries(door_register ${catkin_LIBRARIES} ${OpenCV_LIBS})
+
+add_executable(disinfection_module src/disinfection_module.cpp)
+target_link_libraries(disinfection_module ${catkin_LIBRARIES} ${OpenCV_LIBS})

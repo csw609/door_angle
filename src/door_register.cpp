@@ -132,7 +132,6 @@ int main(int argc, char **argv)
         double door_angle_rad = std::atan2(y2-y1,x2-x1);
         std::cout << "door angle : " << door_angle_rad << std::endl;
 
-
         marker.id = static_cast<int>(i);
         marker.header.stamp = ros::Time::now();
         marker.type = visualization_msgs::Marker::CUBE;

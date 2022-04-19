@@ -80,7 +80,7 @@ int main(int argc, char **argv)
   ROS_INFO("cy : %s", cy.c_str());
 
   // Pub & Sub
-  ros::Publisher fusion_image_pub = nh.advertise<sensor_msgs::Image>("fusion_image", 1000);
+  ros::Publisher fusion_image_pub = nh.advertise<sensor_msgs::Image>("/fusion_image", 1000);
   ros::Publisher cloud_door_pub   = nh.advertise<sensor_msgs::PointCloud2>("/cloud_door", 1000);
   ros::Publisher door_poses_pub   = nh.advertise<door_angle::DoorPoses>("/door_poses", 1000);
 
