@@ -143,7 +143,7 @@ int main(int argc, char **argv)
   geometry_msgs::TransformStamped tfb2m;
 
   bool tf_received = false;
-
+  bool localization = true;
   while (ros::ok())
   {
 
@@ -228,10 +228,12 @@ int main(int argc, char **argv)
         continue;
       }
     }
+
     try{
+
       tfb2m = tfBuffer.lookupTransform("map", "base_link",
                                        ros::Time(0));
-
+      localization = true;
       Eigen::Quaterniond qb2m;
       qb2m.x() = tfb2m.transform.rotation.x;
       qb2m.y() = tfb2m.transform.rotation.y;
@@ -262,6 +264,7 @@ int main(int argc, char **argv)
       //std::cout << Tb2m << std::endl;
     }
     catch (tf2::TransformException &ex) {
+      //localization = false;
       //ROS_WARN("%s",ex.what());
       //continue;
     }
@@ -578,30 +581,34 @@ int main(int argc, char **argv)
                 int index2 = dqMaxInlier.back();
 
                 // convert coordinate !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                Eigen::Vector4d handle4d;
+                if(localization){
+                  Eigen::Vector4d handle4d;
 
-                handle4d(0) = vecHandle[static_cast<unsigned long>(index1)](0);
-                handle4d(1) = vecHandle[static_cast<unsigned long>(index1)](1);
-                handle4d(2) = 0.0;
-                handle4d(3) = 1.0;
+                  handle4d(0) = vecHandle[static_cast<unsigned long>(index1)](0);
+                  handle4d(1) = vecHandle[static_cast<unsigned long>(index1)](1);
+                  handle4d(2) = 0.0;
+                  handle4d(3) = 1.0;
 
-                handle4d = Tb2m * Tl2b * handle4d;
 
-                doorPose.x1 = static_cast<float>(handle4d(0));
-                doorPose.y1 = static_cast<float>(handle4d(1));
 
-                handle4d(0) = vecHandle[static_cast<unsigned long>(index2)](0);
-                handle4d(1) = vecHandle[static_cast<unsigned long>(index2)](1);
-                handle4d(2) = 0.0;
-                handle4d(3) = 1.0;
+                  handle4d = Tb2m * Tl2b * handle4d;
 
-                handle4d = Tb2m * Tl2b * handle4d;
+                  doorPose.x1 = static_cast<float>(handle4d(0));
+                  doorPose.y1 = static_cast<float>(handle4d(1));
 
-                doorPose.x2 = static_cast<float>(handle4d(0));
-                doorPose.y2 = static_cast<float>(handle4d(1));
+                  handle4d(0) = vecHandle[static_cast<unsigned long>(index2)](0);
+                  handle4d(1) = vecHandle[static_cast<unsigned long>(index2)](1);
+                  handle4d(2) = 0.0;
+                  handle4d(3) = 1.0;
 
-                std::cout << "a : " << maxA << ", b : " << maxB << std::endl;
-                doorPoses.door_poses.push_back(doorPose);
+                  handle4d = Tb2m * Tl2b * handle4d;
+
+                  doorPose.x2 = static_cast<float>(handle4d(0));
+                  doorPose.y2 = static_cast<float>(handle4d(1));
+
+                  std::cout << "a : " << maxA << ", b : " << maxB << std::endl;
+                  doorPoses.door_poses.push_back(doorPose);
+                }
               }
             }
           }
@@ -637,7 +644,7 @@ int main(int argc, char **argv)
     }
 
 
-
+    //localization = false;
     ros::spinOnce();
     //loop_rate.sleep();
   } // while
