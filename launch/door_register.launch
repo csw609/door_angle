@@ -1,0 +1,8 @@
+<launch>
+    <arg name="object" default="door.yaml"/>
+
+    <rosparam command="load" file="$(find door_angle)/obj/$(arg object)" />
+
+    <node pkg="door_angle" type="door_register" name="door_register" output="screen">
+    </node>
+</launch>

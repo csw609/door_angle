@@ -5,8 +5,8 @@ bounding_topic: /bounding_box_array
 # Lidar scan topic
 scan_topic: /scan
 # camera intrinsic
-fx: 462.1379699707031
-fy: 462.1379699707031
-cx: 320.0
-cy: 240.0
+fx: "462.1379699707031"
+fy: "462.1379699707031"
+cx: "320.0"
+cy: "240.0"
 

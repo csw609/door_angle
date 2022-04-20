@@ -31,25 +31,36 @@ int main(int argc, char **argv)
   std::string filePath = pkg_path + "/obj/door.yaml";
   std::cout << filePath << std::endl;
 
-  cv::FileStorage fsSettings(filePath, cv::FileStorage::READ);
-  std::cout << fsSettings.isOpened() << std::endl;
+  //cv::FileStorage fsSettings(filePath, cv::FileStorage::READ);
+  //std::cout << fsSettings.isOpened() << std::endl;
 
   while(true){
+
     std::string cnt = "door" + std::to_string(vecDoor.size()+1);
-    std::cout << cnt << std::endl;
-    cv::FileNode door_pos = fsSettings[cnt];
-    if(door_pos.empty()){
+    //std::cout << cnt << std::endl;
+    //cv::FileNode door_pos = fsSettings[cnt];
+    if(!nh.hasParam(cnt+"x1")){
       break;
     }
     else{
-      std::cout << "make marker" << std::endl;
+      std::cout << "Read " + cnt << std::endl;
 
       door_angle::DoorPose doorRead;
+      std::string x1, x2, y1, y2;
+      std::string tmp = cnt +"x1";
+      nh.param<std::string>(cnt+"x1",x1,"0.0");
+      nh.param<std::string>(cnt+"y1",y1,"0.0");
+      nh.param<std::string>(cnt+"x2",x2,"0.0");
+      nh.param<std::string>(cnt+"y2",y2,"0.0");
 
-      doorRead.x1 = static_cast<float>(door_pos["x1"]);
-      doorRead.y1 = static_cast<float>(door_pos["y1"]);
-      doorRead.x2 = static_cast<float>(door_pos["x2"]);
-      doorRead.y2 = static_cast<float>(door_pos["y2"]);
+      std::cout << "x1 : " << x1 << "\n";
+      std::cout << "y1 : " << y1 << "\n";
+      std::cout << "x2 : " << x2 << "\n";
+      std::cout << "y2 : " << y2 << "\n";
+      doorRead.x1 = std::stof(x1);
+      doorRead.y1 = std::stof(y1);
+      doorRead.x2 = std::stof(x2);
+      doorRead.y2 = std::stof(y2);
 
       vecDoor.push_back(doorRead);
 

@@ -284,27 +284,28 @@ int main(int argc, char **argv)
 
 
       //rgb, scan, bounding box time sync 1.0 s
-      if (time_r < time_s - 0.05)
-      {
-        image_buf.pop();
-        ROS_INFO("pop rgb_image\n");
-      }
-      else if (time_r > time_s + 0.05)
-      {
-        scan_buf.pop();
-        ROS_INFO("rgb : %f", time_r);
-        ROS_INFO("s : %f", time_s);
-        ROS_INFO("pop scan\n");
-      }
-      else if(time_r < time_b - 0.05){
-        image_buf.pop();
-        ROS_INFO("pop rgb_image\n");
-      }
-      else if(time_r > time_b + 0.05){
-        bounding_buf.pop();
-        ROS_INFO("pop bound header\n");
-      }
-      else if(!bounding_buf.front()->bounding_boxes.empty())  //bounding box not empty && satisfy time sync
+//      if (time_r < time_s - 0.05)
+//      {
+//        image_buf.pop();
+//        ROS_INFO("pop rgb_image\n");
+//      }
+//      else if (time_r > time_s + 0.05)
+//      {
+//        scan_buf.pop();
+//        ROS_INFO("rgb : %f", time_r);
+//        ROS_INFO("s : %f", time_s);
+//        ROS_INFO("pop scan\n");
+//      }
+//      else if(time_r < time_b - 0.05){
+//        image_buf.pop();
+//        ROS_INFO("pop rgb_image\n");
+//      }
+//      else if(time_r > time_b + 0.05){
+//        bounding_buf.pop();
+//        ROS_INFO("pop bound header\n");
+//      }
+//      else
+        if(!bounding_buf.front()->bounding_boxes.empty())  //bounding box not empty && satisfy time sync
       {
         time = image_buf.front()->header.stamp.toSec();
 
@@ -533,7 +534,7 @@ int main(int argc, char **argv)
               double threshHold = 0.1; // parameter!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
               int vecSize = static_cast<int>(vecHandle.size());
 
-              int count = 20;
+              int count = 60;
               srand(std::time(NULL));
 
               int maxInlierNum = 0;
