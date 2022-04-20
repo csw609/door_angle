@@ -19,8 +19,6 @@
 
 std::vector<door_angle::DoorPose> vecDoor;
 
-
-
 void doorCallback(const door_angle::DoorPosesPtr& doors)
 {
   double distanceThresh = 1.0;
@@ -73,7 +71,6 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "door_register");
 
   ros::NodeHandle nh;
-
   ros::Subscriber sub = nh.subscribe("/door_poses", 1000, doorCallback);
 
   ros::Publisher markerArr_pub = nh.advertise<visualization_msgs::MarkerArray>("/door_marker", 1000);
@@ -89,10 +86,12 @@ int main(int argc, char **argv)
   //cv::FileStorage fsSettings(filePath, cv::FileStorage::READ);
   //std::cout << fsSettings.isOpened() << std::endl;
 
+
+
   while(true){
 
     std::string cnt = "door" + std::to_string(vecDoor.size()+1);
-    //std::cout << cnt << std::endl;
+    std::cout << cnt << std::endl;
     //cv::FileNode door_pos = fsSettings[cnt];
     if(!nh.hasParam(cnt+"x1")){
       break;
@@ -121,6 +120,24 @@ int main(int argc, char **argv)
 
       //double door_angle_rad = std::atan2(static_cast<double>(doorRead.y2-doorRead.y1),static_cast<double>(doorRead.x2-doorRead.x1));
       //std::cout << "door angle : " << door_angle_rad << std::endl;
+    }
+  }
+
+  int nDoor = 1;
+  while(true){
+
+    std::string cnt = "door" + std::to_string(nDoor);
+
+    if(!nh.hasParam(cnt+"x1")){
+      break;
+    }
+    else{
+      std::cout << "delete " + cnt << std::endl;
+      nh.deleteParam(cnt+"x1");
+      nh.deleteParam(cnt+"y1");
+      nh.deleteParam(cnt+"x2");
+      nh.deleteParam(cnt+"y2");
+      nDoor++;
     }
   }
 
@@ -180,22 +197,6 @@ int main(int argc, char **argv)
 
     markerArr_pub.publish(markerArr);
     ros::spinOnce();
-  }
-
-  while(true){
-
-    std::string cnt = "door" + std::to_string(vecDoor.size()+1);
-    //std::cout << cnt << std::endl;
-    //cv::FileNode door_pos = fsSettings[cnt];
-    if(!nh.hasParam(cnt+"x1")){
-      break;
-    }
-    else{
-      std::cout << "delete " + cnt << std::endl;
-      nh.deleteParam(cnt);
-      //double door_angle_rad = std::atan2(static_cast<double>(doorRead.y2-doorRead.y1),static_cast<double>(doorRead.x2-doorRead.x1));
-      //std::cout << "door angle : " << door_angle_rad << std::endl;
-    }
   }
 
   return 0;

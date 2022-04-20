@@ -68,6 +68,25 @@ int main(int argc, char **argv)
       //std::cout << "door angle : " << door_angle_rad << std::endl;
     }
   }
+
+  int nDoor = 1;
+  while(true){
+
+    std::string cnt = "door" + std::to_string(nDoor);
+
+    if(!nh.hasParam(cnt+"x1")){
+      break;
+    }
+    else{
+      std::cout << "delete " + cnt << std::endl;
+      nh.deleteParam(cnt+"x1");
+      nh.deleteParam(cnt+"y1");
+      nh.deleteParam(cnt+"x2");
+      nh.deleteParam(cnt+"y2");
+      nDoor++;
+    }
+  }
+
   std::vector<geometry_msgs::PoseStamped> vecRobotPose;
   geometry_msgs::PoseArray robotPoseArr;
   robotPoseArr.header.frame_id = "map";
@@ -113,23 +132,6 @@ int main(int argc, char **argv)
     robot_pose_arr_pub.publish(robotPoseArr);
     ros::spinOnce();
   }
-
-  while(true){
-
-    std::string cnt = "door" + std::to_string(vecDoor.size()+1);
-    //std::cout << cnt << std::endl;
-    //cv::FileNode door_pos = fsSettings[cnt];
-    if(!nh.hasParam(cnt+"x1")){
-      break;
-    }
-    else{
-      std::cout << "delete " + cnt << std::endl;
-      nh.deleteParam(cnt);
-      //double door_angle_rad = std::atan2(static_cast<double>(doorRead.y2-doorRead.y1),static_cast<double>(doorRead.x2-doorRead.x1));
-      //std::cout << "door angle : " << door_angle_rad << std::endl;
-    }
-  }
-
 
   return 0;
 }
