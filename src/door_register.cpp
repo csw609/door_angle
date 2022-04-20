@@ -51,7 +51,7 @@ void doorCallback(const door_angle::DoorPosesPtr& doors)
 
       std::ofstream fsOut(filePath, std::ios_base::app);
       //cv::FileStorage fsOut(filePath, cv::FileStorage::APPEND);
-      std::string cnt = "door" + std::to_string(i+1);
+      std::string cnt = "door" + std::to_string(vecDoor.size()+1);
       fsOut << cnt + "x1: \"" << doorPose.x1 << "\"\n"
             << cnt + "y1: \"" << doorPose.y1 << "\"\n"
             << cnt + "x2: \"" << doorPose.x2 << "\"\n"
@@ -180,6 +180,22 @@ int main(int argc, char **argv)
 
     markerArr_pub.publish(markerArr);
     ros::spinOnce();
+  }
+
+  while(true){
+
+    std::string cnt = "door" + std::to_string(vecDoor.size()+1);
+    //std::cout << cnt << std::endl;
+    //cv::FileNode door_pos = fsSettings[cnt];
+    if(!nh.hasParam(cnt+"x1")){
+      break;
+    }
+    else{
+      std::cout << "delete " + cnt << std::endl;
+      nh.deleteParam(cnt);
+      //double door_angle_rad = std::atan2(static_cast<double>(doorRead.y2-doorRead.y1),static_cast<double>(doorRead.x2-doorRead.x1));
+      //std::cout << "door angle : " << door_angle_rad << std::endl;
+    }
   }
 
   return 0;
