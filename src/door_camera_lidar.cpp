@@ -59,7 +59,7 @@ int main(int argc, char **argv)
 
   // parameters
   std::string image_topic, bounding_topic, scan_topic;
-  std::string fx,fy,cx,cy;
+  std::string fx,fy,cx,cy, sync_tol;
 
   nh.param<std::string>("image_topic",image_topic,"/camera/color/image_raw");
   nh.param<std::string>("bounding_topic",bounding_topic,"/bounding_box_array");
@@ -69,6 +69,9 @@ int main(int argc, char **argv)
   nh.param<std::string>("fy",fy,"462.1379699707031");
   nh.param<std::string>("cx",cx,"320.0");
   nh.param<std::string>("cy",cy,"240.0");
+  nh.param<std::string>("sync_tolerance",sync_tol,"0.1");
+
+  double tolerance = std::stod(sync_tol);
 
   ROS_INFO("image topic : %s", image_topic.c_str());
   ROS_INFO("bounding boxes topic : %s", bounding_topic.c_str());
@@ -281,31 +284,29 @@ int main(int argc, char **argv)
       door_angle::BoundingBoxes boxes;
       std_msgs::Header header;
 
-
-
       //rgb, scan, bounding box time sync 1.0 s
-//      if (time_r < time_s - 0.05)
-//      {
-//        image_buf.pop();
-//        ROS_INFO("pop rgb_image\n");
-//      }
-//      else if (time_r > time_s + 0.05)
-//      {
-//        scan_buf.pop();
-//        ROS_INFO("rgb : %f", time_r);
-//        ROS_INFO("s : %f", time_s);
-//        ROS_INFO("pop scan\n");
-//      }
-//      else if(time_r < time_b - 0.05){
-//        image_buf.pop();
-//        ROS_INFO("pop rgb_image\n");
-//      }
-//      else if(time_r > time_b + 0.05){
-//        bounding_buf.pop();
-//        ROS_INFO("pop bound header\n");
-//      }
-//      else
-        if(!bounding_buf.front()->bounding_boxes.empty())  //bounding box not empty && satisfy time sync
+
+      if (time_r < time_s - tolerance)
+      {
+        image_buf.pop();
+        ROS_INFO("pop rgb_image\n");
+      }
+      else if (time_r > time_s + tolerance)
+      {
+        scan_buf.pop();
+        ROS_INFO("rgb : %f", time_r);
+        ROS_INFO("s : %f", time_s);
+        ROS_INFO("pop scan\n");
+      }
+      else if(time_r < time_b - tolerance){
+        image_buf.pop();
+        ROS_INFO("pop rgb_image\n");
+      }
+      else if(time_r > time_b + tolerance){
+        bounding_buf.pop();
+        ROS_INFO("pop bound header\n");
+      }
+      else if(!bounding_buf.front()->bounding_boxes.empty())  //bounding box not empty && satisfy time sync
       {
         time = image_buf.front()->header.stamp.toSec();
 
