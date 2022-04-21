@@ -19,6 +19,8 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   tf2
   actionlib_msgs
+  actionlib
+  move_base_msgs
 )
 find_package (OpenCV 3.2.0 REQUIRED)
 #find_package(Eigen3 REQUIRED)

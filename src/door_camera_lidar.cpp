@@ -83,13 +83,13 @@ int main(int argc, char **argv)
   ROS_INFO("cy : %s", cy.c_str());
 
   // Pub & Sub
-  ros::Publisher fusion_image_pub = nh.advertise<sensor_msgs::Image>("/fusion_image", 1000);
-  ros::Publisher cloud_door_pub   = nh.advertise<sensor_msgs::PointCloud2>("/cloud_door", 1000);
-  ros::Publisher door_poses_pub   = nh.advertise<door_angle::DoorPoses>("/door_poses", 1000);
+  ros::Publisher fusion_image_pub = nh.advertise<sensor_msgs::Image>("/fusion_image", 10);
+  ros::Publisher cloud_door_pub   = nh.advertise<sensor_msgs::PointCloud2>("/cloud_door", 10);
+  ros::Publisher door_poses_pub   = nh.advertise<door_angle::DoorPoses>("/door_poses", 10);
 
-  ros::Subscriber image_sub = nh.subscribe(image_topic, 1000, imgCallback);
-  ros::Subscriber bouding_box_sub = nh.subscribe(bounding_topic,1000, boundCallback);
-  ros::Subscriber scan_sub = nh.subscribe(scan_topic, 1000, scanCallback);
+  ros::Subscriber image_sub = nh.subscribe(image_topic, 10, imgCallback);
+  ros::Subscriber bouding_box_sub = nh.subscribe(bounding_topic,10, boundCallback);
+  ros::Subscriber scan_sub = nh.subscribe(scan_topic, 10, scanCallback);
 
   tf2_ros::Buffer tfBuffer;
   tf2_ros::TransformListener tfListener(tfBuffer);

@@ -71,9 +71,9 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "door_register");
 
   ros::NodeHandle nh;
-  ros::Subscriber sub = nh.subscribe("/door_poses", 1000, doorCallback);
+  ros::Subscriber sub = nh.subscribe("/door_poses", 10, doorCallback);
 
-  ros::Publisher markerArr_pub = nh.advertise<visualization_msgs::MarkerArray>("/door_marker", 1000);
+  ros::Publisher markerArr_pub = nh.advertise<visualization_msgs::MarkerArray>("/door_marker", 10);
 
   visualization_msgs::MarkerArray markerArr;
   visualization_msgs::Marker marker;

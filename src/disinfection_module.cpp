@@ -9,6 +9,10 @@
 #include <tf2_ros/transform_listener.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <actionlib_msgs/GoalStatusArray.h>
+#include <actionlib_msgs/GoalID.h>
+#include <move_base_msgs/MoveBaseGoal.h>
+#include <move_base_msgs/MoveBaseAction.h>
+#include <actionlib/client/simple_action_client.h>
 
 #include <opencv2/opencv.hpp>
 
@@ -44,28 +48,47 @@ uint8 LOST            = 9   # An action client can determine that a goal is LOST
 */
 int nRobotStatus = -2;
 int nDisinfStatus = 0;
+std::string strMode = "nothing";
+
 void statusCallback(const actionlib_msgs::GoalStatusArrayPtr &status)
 {
   if(!status->status_list.empty()){
     nRobotStatus = static_cast<int>(status->status_list.back().status);
-    std::cout << nRobotStatus << "\n";
+    //    if(strMode == "disinfection"){
+    //      std::cout << nRobotStatus << "\n";
+    //    }
   }
   else {
     nRobotStatus = -1;
-    std::cout << "Need Initialize?"  << "\n";
+    //std::cout << "Need Initialize?"  << "\n";
   }
 
 }
+
+void modeCallback(const std_msgs::StringPtr &msg)
+{
+  strMode = msg->data;
+}
+
+typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
 
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "disinfection_module");
   ros::NodeHandle nh;
 
-  ros::Publisher robot_pose_arr_pub = nh.advertise<geometry_msgs::PoseArray>("/robot_pose_array", 1000);
-  ros::Publisher simple_goal_pub    = nh.advertise<geometry_msgs::PoseStamped>("/move_base_simple/goal", 1000);
+  MoveBaseClient ac("move_base", true);
 
-  ros::Subscriber robot_status_sub = nh.subscribe("/move_base/status", 1000, statusCallback);
+  while(!ac.waitForServer(ros::Duration(5.0))){
+    ROS_INFO("Waiting for the move_base action server to come up");
+  }
+
+  ros::Publisher robot_pose_arr_pub    = nh.advertise<geometry_msgs::PoseArray>("/robot_pose_array", 10);
+  //ros::Publisher move_base_goal_pub    = nh.advertise<move_base_msgs::MoveBaseActionGoal>("/move_base/goal", 10);
+  //ros::Publisher move_base_cancel_pub  = nh.advertise<actionlib_msgs::GoalID>("/move_base/cancel",10);
+
+  ros::Subscriber robot_status_sub = nh.subscribe("/move_base/status", 10, statusCallback);
+  ros::Subscriber umbot_mode_sub = nh.subscribe("/umbot_mode", 10, modeCallback);
 
   std::string pkg_path = ros::package::getPath("door_angle");
   std::string filePath = pkg_path + "/obj/door.yaml";
@@ -175,167 +198,214 @@ int main(int argc, char **argv)
 
   tf2_ros::Buffer tfBuffer;
   tf2_ros::TransformListener tfListener(tfBuffer);
-  bool localization = true;
+  bool bLocalization = true;
   int nPathCnt = 0;
   bool bGoalFlag = true;
+  bool bStopFlag = true;
   std::vector<int> vecPath;
+
   while (ros::ok())
   {
+    //std::cout << strMode << "\n";
 
-    try{
+    if(strMode == "disinfection"){
+      bStopFlag = false;
+      //std::cout << "disinfection ON" << "\n";
 
-      tfb2m = tfBuffer.lookupTransform("map", "base_link",
-                                       ros::Time(0));
-      localization = true;
-      Eigen::Quaterniond qb2m;
-      qb2m.x() = tfb2m.transform.rotation.x;
-      qb2m.y() = tfb2m.transform.rotation.y;
-      qb2m.z() = tfb2m.transform.rotation.z;
-      qb2m.w() = tfb2m.transform.rotation.w;
-      Eigen::Matrix3d rb2m = qb2m.normalized().toRotationMatrix();
-      Eigen::Matrix3d rm2b = rb2m.inverse();
-      Eigen::Vector3d vb2m, vm2b;
-      vb2m(0) = tfb2m.transform.translation.x;
-      vb2m(1) = tfb2m.transform.translation.y;
-      vb2m(2) = tfb2m.transform.translation.z;
-      vm2b = -rm2b*vb2m;
 
-      Tb2m(0,0) = rb2m(0,0); Tb2m(0,1) = rb2m(0,1); Tb2m(0,2) = rb2m(0,2);
-      Tb2m(1,0) = rb2m(1,0); Tb2m(1,1) = rb2m(1,1); Tb2m(1,2) = rb2m(1,2);
-      Tb2m(2,0) = rb2m(2,0); Tb2m(2,1) = rb2m(2,1); Tb2m(2,2) = rb2m(2,2);
-      Tb2m(0,3) = tfb2m.transform.translation.x;
-      Tb2m(1,3) = tfb2m.transform.translation.y;
-      Tb2m(2,3) = tfb2m.transform.translation.z;
+      try{
 
-      Tm2b(0,0) = rm2b(0,0); Tm2b(0,1) = rm2b(0,1); Tm2b(0,2) = rm2b(0,2);
-      Tm2b(1,0) = rm2b(1,0); Tm2b(1,1) = rm2b(1,1); Tm2b(1,2) = rm2b(1,2);
-      Tm2b(2,0) = rm2b(2,0); Tm2b(2,1) = rm2b(2,1); Tm2b(2,2) = rm2b(2,2);
-      Tm2b(0,3) = vm2b(0);
-      Tm2b(1,3) = vm2b(1);
-      Tm2b(2,3) = vm2b(2);
+        tfb2m = tfBuffer.lookupTransform("map", "base_link",
+                                         ros::Time(0));
+        bLocalization = true;
+        Eigen::Quaterniond qb2m;
+        qb2m.x() = tfb2m.transform.rotation.x;
+        qb2m.y() = tfb2m.transform.rotation.y;
+        qb2m.z() = tfb2m.transform.rotation.z;
+        qb2m.w() = tfb2m.transform.rotation.w;
+        Eigen::Matrix3d rb2m = qb2m.normalized().toRotationMatrix();
+        Eigen::Matrix3d rm2b = rb2m.inverse();
+        Eigen::Vector3d vb2m, vm2b;
+        vb2m(0) = tfb2m.transform.translation.x;
+        vb2m(1) = tfb2m.transform.translation.y;
+        vb2m(2) = tfb2m.transform.translation.z;
+        vm2b = -rm2b*vb2m;
 
-      //std::cout << Tb2m << std::endl;
-    }
-    catch (tf2::TransformException &ex) {
-      //localization = false;
-      //ROS_WARN("%s",ex.what());
-      //continue;
-    }
+        Tb2m(0,0) = rb2m(0,0); Tb2m(0,1) = rb2m(0,1); Tb2m(0,2) = rb2m(0,2);
+        Tb2m(1,0) = rb2m(1,0); Tb2m(1,1) = rb2m(1,1); Tb2m(1,2) = rb2m(1,2);
+        Tb2m(2,0) = rb2m(2,0); Tb2m(2,1) = rb2m(2,1); Tb2m(2,2) = rb2m(2,2);
+        Tb2m(0,3) = tfb2m.transform.translation.x;
+        Tb2m(1,3) = tfb2m.transform.translation.y;
+        Tb2m(2,3) = tfb2m.transform.translation.z;
 
-    if(localization && vecPath.empty()){
-      Eigen::Vector4d robotPose_m;
-      robotPose_m.Zero();
-      robotPose_m(3) = 1.0;
+        Tm2b(0,0) = rm2b(0,0); Tm2b(0,1) = rm2b(0,1); Tm2b(0,2) = rm2b(0,2);
+        Tm2b(1,0) = rm2b(1,0); Tm2b(1,1) = rm2b(1,1); Tm2b(1,2) = rm2b(1,2);
+        Tm2b(2,0) = rm2b(2,0); Tm2b(2,1) = rm2b(2,1); Tm2b(2,2) = rm2b(2,2);
+        Tm2b(0,3) = vm2b(0);
+        Tm2b(1,3) = vm2b(1);
+        Tm2b(2,3) = vm2b(2);
 
-      robotPose_m = Tb2m * robotPose_m;
-
-      double dRobotX_m = robotPose_m(0);
-      double dRobotY_m = robotPose_m(1);
-
-      // calculate distance
-      double table[40][40];
-      bool visited[40] = {};
-      visited[0] = true;
-      table[0][0] = 0;
-      for(unsigned long i = 0; i < vecDoor.size(); i++){
-        double x1 = static_cast<double>(vecDoor[i].x1);
-        double y1 = static_cast<double>(vecDoor[i].y1);
-        double x2 = static_cast<double>(vecDoor[i].x2);
-        double y2 = static_cast<double>(vecDoor[i].y2);
-
-        double dDoorX = (x1 + x2) * 0.5;
-        double dDoorY = (y1 + y2) * 0.5;
-
-        double dDistSQ = (dRobotX_m - dDoorX) * (dRobotX_m - dDoorX) + (dRobotY_m - dDoorY) * (dRobotY_m - dDoorY);
-        //std::cout << dDistSQ << "\n";
-        table[0][i+1] = dDistSQ;
-        table[i+1][0] = dDistSQ;
+        //std::cout << Tb2m << std::endl;
+      }
+      catch (tf2::TransformException &ex) {
+        //localization = false;
+        ROS_WARN("%s",ex.what());
+        //continue;
       }
 
-      for(unsigned long i = 0; i < vecDoor.size(); i++){
-        for(unsigned long j = 0; j < vecDoor.size(); j++){
-          if(i == j) {
-            table[i+1][j+1] = 0.0;
-            continue;
-          }
+      if(bLocalization && vecPath.empty()){
+        std::cout << "Make Disinfection Path" << "\n";
+        Eigen::Vector4d robotPose_m;
+        robotPose_m(0) = 0.0;
+        robotPose_m(1) = 0.0;
+        robotPose_m(2) = 0.0;
+        robotPose_m(3) = 1.0;
+
+        robotPose_m = Tb2m * robotPose_m;
+
+        std::cout << Tb2m(0,3) << "\n";
+        std::cout << Tb2m(1,3) << "\n";
+        std::cout << Tb2m(2,3) << "\n";
+
+
+        double dRobotX_m = robotPose_m(0);
+        double dRobotY_m = robotPose_m(1);
+
+        // calculate distance
+        double table[40][40];
+        bool visited[40] = {};
+        visited[0] = true;
+        table[0][0] = 0;
+        for(unsigned long i = 0; i < vecDoor.size(); i++){
           double x1 = static_cast<double>(vecDoor[i].x1);
           double y1 = static_cast<double>(vecDoor[i].y1);
           double x2 = static_cast<double>(vecDoor[i].x2);
           double y2 = static_cast<double>(vecDoor[i].y2);
 
-          double dDoorXi = (x1 + x2) * 0.5;
-          double dDoorYi = (y1 + y2) * 0.5;
+          double dDoorX = (x1 + x2) * 0.5;
+          double dDoorY = (y1 + y2) * 0.5;
 
-          x1 = static_cast<double>(vecDoor[j].x1);
-          y1 = static_cast<double>(vecDoor[j].y1);
-          x2 = static_cast<double>(vecDoor[j].x2);
-          y2 = static_cast<double>(vecDoor[j].y2);
-
-          double dDoorXj = (x1 + x2) * 0.5;
-          double dDoorYj = (y1 + y2) * 0.5;
-
-          double dDistSQ = (dDoorXi - dDoorXj) * (dDoorXi - dDoorXj) + (dDoorYi - dDoorYj) * (dDoorYi - dDoorYj);
-
-          table[i+1][j+1] = dDistSQ;
-          table[j+1][i+1] = dDistSQ;
+          double dDistSQ = (dRobotX_m - dDoorX) * (dRobotX_m - dDoorX) + (dRobotY_m - dDoorY) * (dRobotY_m - dDoorY);
+          //std::cout << dDistSQ << "\n";
+          table[0][i+1] = dDistSQ;
+          table[i+1][0] = dDistSQ;
         }
-      }
 
-      for(unsigned long i = 0; i < vecDoor.size() +1; i++){
-        for(unsigned long j = 0; j < vecDoor.size() + 1; j++){
-          std::cout << table[i][j] << " ";
-        }
-        std::cout << "\n";
-      }
+        for(unsigned long i = 0; i < vecDoor.size(); i++){
+          for(unsigned long j = 0; j < vecDoor.size(); j++){
+            if(i == j) {
+              table[i+1][j+1] = 0.0;
+              continue;
+            }
+            double x1 = static_cast<double>(vecDoor[i].x1);
+            double y1 = static_cast<double>(vecDoor[i].y1);
+            double x2 = static_cast<double>(vecDoor[i].x2);
+            double y2 = static_cast<double>(vecDoor[i].y2);
 
-      // Make Path
-      int startIndex = 0;
+            double dDoorXi = (x1 + x2) * 0.5;
+            double dDoorYi = (y1 + y2) * 0.5;
 
-      for(unsigned long i = 0; i < vecDoor.size(); i++){
-        double dMin = 987654321.0;
-        int nMinIndex = 0;
-        for(int j = 0; j < static_cast<int>(vecDoor.size()) + 1; j++){
-          if(startIndex == j) continue;
-          if(visited[j]) continue;
-          if(dMin > table[startIndex][j]){
-            dMin = table[startIndex][j];
-            nMinIndex = j;
+            x1 = static_cast<double>(vecDoor[j].x1);
+            y1 = static_cast<double>(vecDoor[j].y1);
+            x2 = static_cast<double>(vecDoor[j].x2);
+            y2 = static_cast<double>(vecDoor[j].y2);
+
+            double dDoorXj = (x1 + x2) * 0.5;
+            double dDoorYj = (y1 + y2) * 0.5;
+
+            double dDistSQ = (dDoorXi - dDoorXj) * (dDoorXi - dDoorXj) + (dDoorYi - dDoorYj) * (dDoorYi - dDoorYj);
+
+            table[i+1][j+1] = dDistSQ;
+            table[j+1][i+1] = dDistSQ;
           }
         }
-        visited[nMinIndex] = true;
-        startIndex = nMinIndex;
-        //std::cout << nMinIndex << "\n";
-        vecPath.push_back(nMinIndex);
-        //std::cout ;
+
+        //        for(unsigned long i = 0; i < vecDoor.size() +1; i++){
+        //          for(unsigned long j = 0; j < vecDoor.size() + 1; j++){
+        //            std::cout << table[i][j] << " ";
+        //          }
+        //          std::cout << "\n";
+        //        }
+
+        // Make Path
+        int startIndex = 0;
+
+        for(unsigned long i = 0; i < vecDoor.size(); i++){
+          double dMin = 987654321.0;
+          int nMinIndex = 0;
+          for(int j = 0; j < static_cast<int>(vecDoor.size()) + 1; j++){
+            if(startIndex == j) continue;
+            if(visited[j]) continue;
+            if(dMin > table[startIndex][j]){
+              dMin = table[startIndex][j];
+              nMinIndex = j;
+            }
+          }
+          visited[nMinIndex] = true;
+          startIndex = nMinIndex;
+          std::cout << "Door" << nMinIndex << "\n";
+          vecPath.push_back(nMinIndex-1);
+          //std::cout ;
+        }
+        std::cout << "status : " << nRobotStatus << "\n";
+        //std::cout << "status : " << ac.getState().text_ << "\n";
+        //bLocalization = false;
       }
 
-      //localization = false;
+
+      if(!vecPath.empty()){
+        nDisinfStatus = 1; // Debug code
+        if((nRobotStatus == 7 || nRobotStatus == 2 || nRobotStatus == 4 || nRobotStatus == -1 || nRobotStatus == 3)
+           && bGoalFlag && nDisinfStatus == 1){ // Robot Reached to Goal & Disinfected
+          // loop style !
+          int vecPathSize = static_cast<int>(vecPath.size());
+
+          // once style !
+          // ???
+
+          //publish goal
+          move_base_msgs::MoveBaseGoal goal;
+//          goal.header.frame_id = "map";
+          unsigned long poseIndex = static_cast<unsigned long>(vecPath[static_cast<unsigned long>(nPathCnt)]);
+//          goal.goal.target_pose.pose = vecRobotPose[poseIndex].pose;
+//          goal.goal.target_pose.header.frame_id = "map";
+//          goal.goal_id.id = std::to_string(nPathCnt);
+          goal.target_pose.header.frame_id = "map";
+          goal.target_pose.pose = vecRobotPose[poseIndex].pose;
+
+          ac.sendGoal(goal);
+          //move_base_goal_pub.publish(goal);
+          std::cout << "Move to Door" << poseIndex+1  << "\n";
+          bGoalFlag = false;
+          nDisinfStatus = 0;
+          nPathCnt = (nPathCnt + 1) % vecPathSize;
+        }
+        else if(nRobotStatus == 3 && bGoalFlag && nDisinfStatus == 0){ // Robot Reached to Goal & not Disinfected
+          std::cout << "Disinfecting" << "\n";
+        }
+        else if(nRobotStatus == 1){ // Robot is moving to door
+          bGoalFlag = true;
+          //std::cout << "Move to Door" << "\n";
+        }
+      }
     }
+    else if(!bStopFlag){
 
-
-    if(!vecPath.empty()){
-      nDisinfStatus = 1; // Debug code
-      if(nRobotStatus == 3 && bGoalFlag && nDisinfStatus == 1){ // Robot Reached to Goal & Disinfected
-        // loop style !
-        int vecPathSize = static_cast<int>(vecPath.size());
-        nPathCnt = (nPathCnt + 1) % vecPathSize;
-
-        // once style !
-
-        geometry_msgs::PoseStamped goalPose;
-        goalPose.header.frame_id = "map";
-        goalPose.pose = vecRobotPose[static_cast<unsigned long>(vecPath[static_cast<unsigned long>(nPathCnt)])].pose;
-
-        simple_goal_pub.publish(goalPose);
-        bGoalFlag = false;
-      }￣
-      if(nRobotStatus == 3 && bGoalFlag && nDisinfStatus == 0){ // Robot Reached to Goal & not Disinfected
-        std::cout << "Wait for disinfection" << "\n";
-      }
-      else if(nRobotStatus == 1){
-        bGoalFlag = true;
-        std::cout << "Move to Door" << "\n";
-      }
+      std::cout << "Disinfection Mode Off!" << std::endl;
+      std::cout << "Robot Stop!" << std::endl;
+//      actionlib_msgs::GoalID cancle;
+//      cancle.id = std::to_string(nPathCnt-1);
+//      move_base_cancel_pub.publish(cancle);
+      ac.cancelGoal();
+      nPathCnt = 0;
+      bGoalFlag = true;
+      bStopFlag = true;
+    }
+    else{
+      nPathCnt = 0;
+      bGoalFlag = true;
+      vecPath.clear();
+      //continue;
     }
 
 
