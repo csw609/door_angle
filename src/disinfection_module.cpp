@@ -8,6 +8,7 @@
 #include <geometry_msgs/PoseArray.h>
 #include <tf2_ros/transform_listener.h>
 #include <geometry_msgs/TransformStamped.h>
+#include <actionlib_msgs/GoalStatusArray.h>
 
 #include <opencv2/opencv.hpp>
 
@@ -21,6 +22,40 @@
 #include <vector>
 
 std::vector<door_angle::DoorPose> vecDoor;
+/*
+uint8 status
+uint8 PENDING         = 0   # The goal has yet to be processed by the action server
+uint8 ACTIVE          = 1   # The goal is currently being processed by the action server
+uint8 PREEMPTED       = 2   # The goal received a cancel request after it started executing
+                            #   and has since completed its execution (Terminal State)
+uint8 SUCCEEDED       = 3   # The goal was achieved successfully by the action server (Terminal State)
+uint8 ABORTED         = 4   # The goal was aborted during execution by the action server due
+                            #    to some failure (Terminal State)
+uint8 REJECTED        = 5   # The goal was rejected by the action server without being processed,
+                            #    because the goal was unattainable or invalid (Terminal State)
+uint8 PREEMPTING      = 6   # The goal received a cancel request after it started executing
+                            #    and has not yet completed execution
+uint8 RECALLING       = 7   # The goal received a cancel request before it started executing,
+                            #    but the action server has not yet confirmed that the goal is canceled
+uint8 RECALLED        = 8   # The goal received a cancel request before it started executing
+                            #    and was successfully cancelled (Terminal State)
+uint8 LOST            = 9   # An action client can determine that a goal is LOST. This should not be
+                            #    sent over the wire by an action server
+*/
+int nRobotStatus = -2;
+int nDisinfStatus = 0;
+void statusCallback(const actionlib_msgs::GoalStatusArrayPtr &status)
+{
+  if(!status->status_list.empty()){
+    nRobotStatus = static_cast<int>(status->status_list.back().status);
+    std::cout << nRobotStatus << "\n";
+  }
+  else {
+    nRobotStatus = -1;
+    std::cout << "Need Initialize?"  << "\n";
+  }
+
+}
 
 int main(int argc, char **argv)
 {
@@ -28,6 +63,9 @@ int main(int argc, char **argv)
   ros::NodeHandle nh;
 
   ros::Publisher robot_pose_arr_pub = nh.advertise<geometry_msgs::PoseArray>("/robot_pose_array", 1000);
+  ros::Publisher simple_goal_pub    = nh.advertise<geometry_msgs::PoseStamped>("/move_base_simple/goal", 1000);
+
+  ros::Subscriber robot_status_sub = nh.subscribe("/move_base/status", 1000, statusCallback);
 
   std::string pkg_path = ros::package::getPath("door_angle");
   std::string filePath = pkg_path + "/obj/door.yaml";
@@ -138,6 +176,9 @@ int main(int argc, char **argv)
   tf2_ros::Buffer tfBuffer;
   tf2_ros::TransformListener tfListener(tfBuffer);
   bool localization = true;
+  int nPathCnt = 0;
+  bool bGoalFlag = true;
+  std::vector<int> vecPath;
   while (ros::ok())
   {
 
@@ -180,19 +221,20 @@ int main(int argc, char **argv)
       //ROS_WARN("%s",ex.what());
       //continue;
     }
-    if(localization){
+
+    if(localization && vecPath.empty()){
       Eigen::Vector4d robotPose_m;
       robotPose_m.Zero();
-      robotPose_m(3) = 0.0;
+      robotPose_m(3) = 1.0;
 
       robotPose_m = Tb2m * robotPose_m;
 
       double dRobotX_m = robotPose_m(0);
       double dRobotY_m = robotPose_m(1);
 
-
-      double table[20][20];
-      bool visited[20] = {};
+      // calculate distance
+      double table[40][40];
+      bool visited[40] = {};
       visited[0] = true;
       table[0][0] = 0;
       for(unsigned long i = 0; i < vecDoor.size(); i++){
@@ -205,10 +247,11 @@ int main(int argc, char **argv)
         double dDoorY = (y1 + y2) * 0.5;
 
         double dDistSQ = (dRobotX_m - dDoorX) * (dRobotX_m - dDoorX) + (dRobotY_m - dDoorY) * (dRobotY_m - dDoorY);
-        std::cout << dDistSQ << "\n";
+        //std::cout << dDistSQ << "\n";
         table[0][i+1] = dDistSQ;
         table[i+1][0] = dDistSQ;
       }
+
       for(unsigned long i = 0; i < vecDoor.size(); i++){
         for(unsigned long j = 0; j < vecDoor.size(); j++){
           if(i == j) {
@@ -243,9 +286,11 @@ int main(int argc, char **argv)
           std::cout << table[i][j] << " ";
         }
         std::cout << "\n";
-
       }
+
+      // Make Path
       int startIndex = 0;
+
       for(unsigned long i = 0; i < vecDoor.size(); i++){
         double dMin = 987654321.0;
         int nMinIndex = 0;
@@ -259,16 +304,41 @@ int main(int argc, char **argv)
         }
         visited[nMinIndex] = true;
         startIndex = nMinIndex;
-        std::cout << nMinIndex << "\n";
+        //std::cout << nMinIndex << "\n";
+        vecPath.push_back(nMinIndex);
         //std::cout ;
-
       }
 
-
-
-      localization = false;
-
+      //localization = false;
     }
+
+
+    if(!vecPath.empty()){
+      nDisinfStatus = 1; // Debug code
+      if(nRobotStatus == 3 && bGoalFlag && nDisinfStatus == 1){ // Robot Reached to Goal & Disinfected
+        // loop style !
+        int vecPathSize = static_cast<int>(vecPath.size());
+        nPathCnt = (nPathCnt + 1) % vecPathSize;
+
+        // once style !
+
+        geometry_msgs::PoseStamped goalPose;
+        goalPose.header.frame_id = "map";
+        goalPose.pose = vecRobotPose[static_cast<unsigned long>(vecPath[static_cast<unsigned long>(nPathCnt)])].pose;
+
+        simple_goal_pub.publish(goalPose);
+        bGoalFlag = false;
+      }￣
+      if(nRobotStatus == 3 && bGoalFlag && nDisinfStatus == 0){ // Robot Reached to Goal & not Disinfected
+        std::cout << "Wait for disinfection" << "\n";
+      }
+      else if(nRobotStatus == 1){
+        bGoalFlag = true;
+        std::cout << "Move to Door" << "\n";
+      }
+    }
+
+
 
     robot_pose_arr_pub.publish(robotPoseArr);
     ros::spinOnce();
