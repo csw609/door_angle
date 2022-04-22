@@ -201,7 +201,7 @@ int main(int argc, char **argv)
   bool bLocalization = true;
   int nPathCnt = 0;
   bool bGoalFlag = true;
-  bool bStopFlag = true;
+  bool bStopFlag = true;  //true when robot stop
   std::vector<int> vecPath;
 
   while (ros::ok())
@@ -365,11 +365,11 @@ int main(int argc, char **argv)
 
           //publish goal
           move_base_msgs::MoveBaseGoal goal;
-//          goal.header.frame_id = "map";
+          //          goal.header.frame_id = "map";
           unsigned long poseIndex = static_cast<unsigned long>(vecPath[static_cast<unsigned long>(nPathCnt)]);
-//          goal.goal.target_pose.pose = vecRobotPose[poseIndex].pose;
-//          goal.goal.target_pose.header.frame_id = "map";
-//          goal.goal_id.id = std::to_string(nPathCnt);
+          //          goal.goal.target_pose.pose = vecRobotPose[poseIndex].pose;
+          //          goal.goal.target_pose.header.frame_id = "map";
+          //          goal.goal_id.id = std::to_string(nPathCnt);
           goal.target_pose.header.frame_id = "map";
           goal.target_pose.pose = vecRobotPose[poseIndex].pose;
 
@@ -389,23 +389,31 @@ int main(int argc, char **argv)
         }
       }
     }
-    else if(!bStopFlag){
+    else if(!bStopFlag && strMode != "stop"){
 
       std::cout << "Disinfection Mode Off!" << std::endl;
+      std::cout << "Mode Changed!" << std::endl;
       std::cout << "Robot Stop!" << std::endl;
-//      actionlib_msgs::GoalID cancle;
-//      cancle.id = std::to_string(nPathCnt-1);
-//      move_base_cancel_pub.publish(cancle);
+      //      actionlib_msgs::GoalID cancle;
+      //      cancle.id = std::to_string(nPathCnt-1);
+      //      move_base_cancel_pub.publish(cancle);
       ac.cancelGoal();
       nPathCnt = 0;
       bGoalFlag = true;
       bStopFlag = true;
     }
-    else{
+    else if(strMode != "stop"){
       nPathCnt = 0;
       bGoalFlag = true;
       vecPath.clear();
       //continue;
+    }
+    else if(strMode == "stop"){
+      std::cout << "Disinfection Mode Off!" << std::endl;
+      std::cout << "Robot Stop!" << std::endl;
+      ac.cancelGoal();
+      nPathCnt = ((nPathCnt - 1) + nPathCnt) % static_cast<int>(vecPath.size());
+      bStopFlag = true;
     }
 
 

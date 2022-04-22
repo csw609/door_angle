@@ -11,4 +11,6 @@ cx: "320.0"
 cy: "240.0"
 
 sync_tolerance: "0.1"
+ransac_iteration: "100"
+ransac_threshold: "0.1"
 

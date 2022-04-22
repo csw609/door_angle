@@ -59,7 +59,7 @@ int main(int argc, char **argv)
 
   // parameters
   std::string image_topic, bounding_topic, scan_topic;
-  std::string fx,fy,cx,cy, sync_tol;
+  std::string fx,fy,cx,cy, sync_tol, ransac_iter, ransac_thr;
 
   nh.param<std::string>("image_topic",image_topic,"/camera/color/image_raw");
   nh.param<std::string>("bounding_topic",bounding_topic,"/bounding_box_array");
@@ -70,8 +70,10 @@ int main(int argc, char **argv)
   nh.param<std::string>("cx",cx,"320.0");
   nh.param<std::string>("cy",cy,"240.0");
   nh.param<std::string>("sync_tolerance",sync_tol,"0.1");
+  nh.param<std::string>("ransac_iteration",ransac_iter,"60");
+  nh.param<std::string>("ransac_thershold",ransac_thr,"0.1");
 
-  double tolerance = std::stod(sync_tol);
+
 
   ROS_INFO("image topic : %s", image_topic.c_str());
   ROS_INFO("bounding boxes topic : %s", bounding_topic.c_str());
@@ -81,6 +83,10 @@ int main(int argc, char **argv)
   ROS_INFO("fy : %s", fy.c_str());
   ROS_INFO("cx : %s", cx.c_str());
   ROS_INFO("cy : %s", cy.c_str());
+
+  ROS_INFO("sync_tolernace : %s", sync_tol.c_str());
+  ROS_INFO("ransac iteration : %s", ransac_iter.c_str());
+  ROS_INFO("ransac threshold : %s", ransac_thr.c_str());
 
   // Pub & Sub
   ros::Publisher fusion_image_pub = nh.advertise<sensor_msgs::Image>("/fusion_image", 10);
@@ -134,8 +140,10 @@ int main(int argc, char **argv)
   cv_bridge::CvImage cv_bridge;
 
   //ros::Rate loop_rate(1000);
-
+  double tolerance = std::stod(sync_tol);
   int lack_count = 0;
+  int ransac_count = std::stoi(ransac_iter);
+  double ransac_threshold = std::stod(ransac_thr);
   sensor_msgs::PointCloud2 cloudmsg;
 
   geometry_msgs::TransformStamped tfs2b;
@@ -143,9 +151,10 @@ int main(int argc, char **argv)
   geometry_msgs::TransformStamped tfb2m;
 
   bool tf_received = false;
-  bool localization = true;
+  bool localization = true; //debug => true, release => false
   while (ros::ok())
   {
+    seok::TimeChecker dur;
 
     //receive transform
     if(!tf_received){
@@ -185,7 +194,6 @@ int main(int argc, char **argv)
         Tb2l(0,3) = vb2s(0);
         Tb2l(1,3) = vb2s(1);
         Tb2l(2,3) = vb2s(2);
-
 
         Eigen::Quaterniond qc2b;
         qc2b.x() = tfc2b.transform.rotation.x;
@@ -268,7 +276,7 @@ int main(int argc, char **argv)
       //ROS_WARN("%s",ex.what());
       //continue;
     }
-    seok::TimeChecker dur;
+
     // If data received
     if (!image_buf.empty() && !scan_buf.empty() && !bounding_buf.empty())
     {
@@ -532,13 +540,11 @@ int main(int argc, char **argv)
             }
 
 
-            // calculate angle
             // RANSAC
             if(vecHandle.size() > 3){
-              double threshHold = 0.1; // parameter!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
               int vecSize = static_cast<int>(vecHandle.size());
 
-              int count = 60;
+
               srand(std::time(NULL));
 
               int maxInlierNum = 0;
@@ -546,7 +552,7 @@ int main(int argc, char **argv)
               double maxA;
               double maxB;
 
-              for(int i = 0; i < count; i++){
+              for(int i = 0; i < ransac_count; i++){
                 unsigned long firstIndex = static_cast<unsigned long>(rand() % vecSize);
                 unsigned long secondIndex = static_cast<unsigned long>(rand() % vecSize);
 
@@ -561,7 +567,7 @@ int main(int argc, char **argv)
 
                 std::deque<int> dqInlier;
                 for(int j = 0; j < vecSize; j++){
-                  if( ((a*vecHandle[j](0) -   vecHandle[j](1) + b ) / deno) <= threshHold){
+                  if( ((a*vecHandle[j](0) -   vecHandle[j](1) + b ) / deno) <= ransac_threshold){
                     dqInlier.push_front(j);
                   }
                 }
@@ -588,8 +594,6 @@ int main(int argc, char **argv)
                   handle4d(1) = vecHandle[static_cast<unsigned long>(index1)](1);
                   handle4d(2) = 0.0;
                   handle4d(3) = 1.0;
-
-
 
                   handle4d = Tb2m * Tl2b * handle4d;
 
@@ -638,7 +642,6 @@ int main(int argc, char **argv)
       lack_count++;
       if(lack_count % 2000000 == 0){
         //ROS_INFO("wait messages");
-
         lack_count = 0;
       }
     }
