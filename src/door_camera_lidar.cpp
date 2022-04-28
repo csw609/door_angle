@@ -496,8 +496,8 @@ int main(int argc, char **argv)
               if( (a1 * scanPoints[i](0) + b1) > scanPoints[i](1) && (a2 * scanPoints[i](0) + b2) < scanPoints[i](1) ){
 
                 point.x = static_cast<float>(scanPoints[i](0));
-                point.y = static_cast<float>(scanPoints[i](1));
-                point.z = 0;
+                    point.y = static_cast<float>(scanPoints[i](1));
+                    point.z = 0;
                 point.b = 255;
                 point.g = 0;
                 point.r = 0;
@@ -562,8 +562,8 @@ int main(int argc, char **argv)
                 }
 
                 double a = ( vecHandle[firstIndex](1) - vecHandle[secondIndex](1) ) / ( vecHandle[firstIndex](0) - vecHandle[secondIndex](0) );
-                double b = vecHandle[firstIndex](1) - a * vecHandle[firstIndex](0);
-                double deno = std::sqrt(a*a + 1.0);
+                             double b = vecHandle[firstIndex](1) - a * vecHandle[firstIndex](0);
+                    double deno = std::sqrt(a*a + 1.0);
 
                 std::deque<int> dqInlier;
                 for(int j = 0; j < vecSize; j++){
@@ -611,7 +611,12 @@ int main(int argc, char **argv)
                   doorPose.y2 = static_cast<float>(handle4d(1));
 
                   std::cout << "a : " << maxA << ", b : " << maxB << std::endl;
+
+                  float length = (doorPose.x1 - doorPose.x2) * (doorPose.x1 - doorPose.x2) + (doorPose.x1 - doorPose.x2) * (doorPose.x1 - doorPose.x2);
+                  length = std::sqrt(length);
+                  //if(length > 1) {
                   doorPoses.door_poses.push_back(doorPose);
+                  //}
                 }
               }
             }

@@ -382,6 +382,7 @@ int main(int argc, char **argv)
         }
         else if(nRobotStatus == 3 && bGoalFlag && nDisinfStatus == 0){ // Robot Reached to Goal & not Disinfected
           std::cout << "Disinfecting" << "\n";
+          // add fine control? or not?
         }
         else if(nRobotStatus == 1){ // Robot is moving to door
           bGoalFlag = true;
@@ -405,14 +406,16 @@ int main(int argc, char **argv)
     else if(strMode != "stop"){
       nPathCnt = 0;
       bGoalFlag = true;
+      //std::cout << "path clear!" << "\n";
       vecPath.clear();
       //continue;
     }
-    else if(strMode == "stop"){
+    else if(!bStopFlag && strMode == "stop"){
       std::cout << "Disinfection Mode Off!" << std::endl;
       std::cout << "Robot Stop!" << std::endl;
       ac.cancelGoal();
-      nPathCnt = ((nPathCnt - 1) + nPathCnt) % static_cast<int>(vecPath.size());
+      int vecPathSize = static_cast<int>(vecPath.size());
+      nPathCnt = ((nPathCnt - 1) + vecPathSize) % vecPathSize;
       bStopFlag = true;
     }
 

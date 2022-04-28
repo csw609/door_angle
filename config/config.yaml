@@ -1,5 +1,5 @@
 # image topic
-image_topic: /camera/color/image_raw
+image_topic: /d435/color/image_raw
 # Bounding Boxes array topic
 bounding_topic: /bounding_box_array
 # Lidar scan topic

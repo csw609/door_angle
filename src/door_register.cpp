@@ -26,7 +26,7 @@ void doorCallback(const door_angle::DoorPosesPtr& doors)
   for(unsigned long i = 0; i < doors->door_poses.size(); i++){
     door_angle::DoorPose doorPose = doors->door_poses[i];
 
-    bool overlap = false;
+    int overlap = 0;
     for(unsigned long j = 0; j < vecDoor.size(); j++){
       door_angle::DoorPose doorTmp = vecDoor[j];
       double centerX1 = static_cast<double>(doorPose.x1 + doorPose.x2) / 2.0;
@@ -35,15 +35,15 @@ void doorCallback(const door_angle::DoorPosesPtr& doors)
       double centerY2 = static_cast<double>(doorTmp.y1  + doorTmp.y2)  / 2.0;
 
       double distance = (centerX1 - centerX2) * (centerX1 - centerX2) + (centerY1 - centerY2) * (centerY1 - centerY2);
-
+      //distance = std::sqrt(distance);
       //if too close
       if(distance < distanceThresh){
-        overlap = true;
-        break;
+        overlap++;
+        //break;
       }
     }
     // no overlapped
-    if(!overlap){
+    if(overlap < 1){
       std::string pkg_path = ros::package::getPath("door_angle");
       std::string filePath = pkg_path + "/obj/door.yaml";
 
