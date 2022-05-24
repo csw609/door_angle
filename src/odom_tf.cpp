@@ -70,7 +70,7 @@ void odomCallback(const nav_msgs::OdometryPtr &odom){
 //  std::cout << rb2o(2,0) << " " << rb2o(2,1) << " " << rb2o(2,2) << std::endl;
 
   odometry.header.frame_id = "odom";
-  odometry.child_frame_id = "odom";
+  odometry.child_frame_id = "base_footprint";
 
   odometry.header.stamp = odom->header.stamp;
 
