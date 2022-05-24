@@ -64,3 +64,6 @@ target_link_libraries(door_register ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
 add_executable(disinfection_module src/disinfection_module.cpp)
 target_link_libraries(disinfection_module ${catkin_LIBRARIES} ${OpenCV_LIBS})
+
+add_executable(odom_tf src/odom_tf.cpp)
+target_link_libraries(odom_tf ${catkin_LIBRARIES})

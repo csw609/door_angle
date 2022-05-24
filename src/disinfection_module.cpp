@@ -4,10 +4,14 @@
 #include "std_msgs/String.h"
 #include "visualization_msgs/Marker.h"
 #include "visualization_msgs/MarkerArray.h"
+
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/PoseArray.h>
+
 #include <tf2_ros/transform_listener.h>
+
 #include <geometry_msgs/TransformStamped.h>
+
 #include <actionlib_msgs/GoalStatusArray.h>
 #include <actionlib_msgs/GoalID.h>
 #include <move_base_msgs/MoveBaseGoal.h>
@@ -237,6 +241,7 @@ int main(int argc, char **argv)
         Tb2m(0,3) = tfb2m.transform.translation.x;
         Tb2m(1,3) = tfb2m.transform.translation.y;
         Tb2m(2,3) = tfb2m.transform.translation.z;
+        Tb2m(3,3) = 1.0;
 
         Tm2b(0,0) = rm2b(0,0); Tm2b(0,1) = rm2b(0,1); Tm2b(0,2) = rm2b(0,2);
         Tm2b(1,0) = rm2b(1,0); Tm2b(1,1) = rm2b(1,1); Tm2b(1,2) = rm2b(1,2);
@@ -244,6 +249,7 @@ int main(int argc, char **argv)
         Tm2b(0,3) = vm2b(0);
         Tm2b(1,3) = vm2b(1);
         Tm2b(2,3) = vm2b(2);
+        Tm2b(3,3) = 1.0;
 
         //std::cout << Tb2m << std::endl;
       }
