@@ -160,9 +160,9 @@ int main(int argc, char **argv)
     if(!tf_received){
 
       try{
-        tfs2b = tfBuffer.lookupTransform("base_link", "velodyne",
+        tfs2b = tfBuffer.lookupTransform("body", "camera",
                                          ros::Time(0));
-        tfc2b = tfBuffer.lookupTransform("base_link", "d435_color_optical_frame",
+        tfc2b = tfBuffer.lookupTransform("body", "laser",
                                          ros::Time(0));
         ROS_INFO("%s", tfs2b.child_frame_id.c_str());
         ROS_INFO("%s", tfc2b.child_frame_id.c_str());
@@ -239,7 +239,7 @@ int main(int argc, char **argv)
 
     try{
 
-      tfb2m = tfBuffer.lookupTransform("map", "base_link",
+      tfb2m = tfBuffer.lookupTransform("map", "body",
                                        ros::Time(0));
       localization = true;
       Eigen::Quaterniond qb2m;
