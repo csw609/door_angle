@@ -634,7 +634,7 @@ int main(int argc, char **argv)
 
         //publish door point cloud
         pcl::toROSMsg(cloud, cloudmsg); //convert pcl::PointCloud<pcl::PointXYZRGB> to sensor_msgs::PointCloud2
-        cloudmsg.header.frame_id = "base_footprint";
+        cloudmsg.header.frame_id = "base_footprint"; // frame change????????????????
         cloud_door_pub.publish(cloudmsg);
 
         //publish door poses

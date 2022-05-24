@@ -215,7 +215,7 @@ int main(int argc, char **argv)
 
       try{
 
-        tfb2m = tfBuffer.lookupTransform("map", "base_link",
+        tfb2m = tfBuffer.lookupTransform("map", "base_footprint",
                                          ros::Time(0));
         bLocalization = true;
         Eigen::Quaterniond qb2m;
@@ -248,7 +248,7 @@ int main(int argc, char **argv)
         //std::cout << Tb2m << std::endl;
       }
       catch (tf2::TransformException &ex) {
-        //localization = false;
+        bLocalization = false;
         ROS_WARN("%s",ex.what());
         //continue;
       }
@@ -347,14 +347,19 @@ int main(int argc, char **argv)
           vecPath.push_back(nMinIndex-1);
           //std::cout ;
         }
-        std::cout << "status : " << nRobotStatus << "\n";
+        //std::cout << "status : " << nRobotStatus << "\n";
+        std::cout << "Path" <<"\n";
+        for(int i = 0; i < static_cast<int>(vecPath.size()); i++){
+          std::cout << vecPath[static_cast<unsigned long>(i)] + 1 << " ";
+        }
+        std::cout << "Path Making Complete" << "\n";
         //std::cout << "status : " << ac.getState().text_ << "\n";
         //bLocalization = false;
       }
 
 
       if(!vecPath.empty()){
-        nDisinfStatus = 1; // Debug code
+        nDisinfStatus = 1; // Debug code => later assign '1' after receive disinfection complete signal
         if((nRobotStatus == 7 || nRobotStatus == 2 || nRobotStatus == 4 || nRobotStatus == -1 || nRobotStatus == 3)
            && bGoalFlag && nDisinfStatus == 1){ // Robot Reached to Goal & Disinfected
           // loop style !
