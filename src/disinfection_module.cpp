@@ -413,14 +413,16 @@ int main(int argc, char **argv)
             else{
               std::cout << "Disinfecting!!!!" << "\n";
               geometry_msgs::Twist msgVel;
-              msgVel.linear.x = 0.0;
-              msgVel.linear.y = static_cast<double>(fError * fPgain + (fError - fPrevError) * fDgain);
-              msgVel.linear.z = 0.0;
+              double dYError   = static_cast<double>(fError * fPgain + (fError - fPrevError) * fDgain);
+              msgVel.linear.x  = 0.0;
+              msgVel.linear.y  = dYError;
+              msgVel.linear.z  = 0.0;
               msgVel.angular.x = 0.0;
               msgVel.angular.y = 0.0;
               msgVel.angular.z = 0.0;
-              fPrevError = fError;
+              fPrevError       = fError;
               nDisinfStatus = 0;
+              ROS_INFO("YError : %lf", dYError);
             }
 
           }

@@ -69,6 +69,7 @@ bool disinfect(door_angle::SrvDisinfect::Request  &req,
     sensor_msgs::Image msgImage = (*image_buf.top());
     door_angle::BoundingBoxes msgBoxes = (*bounding_buf.top());
 
+
     // Clear buffer
     while(!scan_buf.empty()){
       scan_buf.pop();
@@ -98,7 +99,7 @@ bool disinfect(door_angle::SrvDisinfect::Request  &req,
       //if(dAngle < -1.57079632675 || dAngle > 1.57079632675) continue; // throw half of scan from -x axis side
 
       //scan points for measure distance from door
-      if(dAngle < 0.0349066 && dAngle > - 0.0349066){   // +- 2 Deg
+      if(dAngle < 0.0872665 && dAngle > - 0.0872665){   // +- 5 Deg
         dDistFromDoor += std::cos(dAngle) * static_cast<double>(msgScan.ranges[i]);
         nDistFromDoorCnt++;
       }
@@ -121,6 +122,7 @@ bool disinfect(door_angle::SrvDisinfect::Request  &req,
 
       return false;
     }
+    // after change to min !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     // Bounding Box Process => get door handle position
 
