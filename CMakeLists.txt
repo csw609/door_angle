@@ -25,6 +25,7 @@ find_package(catkin REQUIRED COMPONENTS
 find_package (OpenCV 3.2.0 REQUIRED)
 #find_package(Eigen3 REQUIRED)
 
+add_service_files(FILES SrvDisinfect.srv)
 add_message_files(FILES bounding.msg BoundingBox.msg BoundingBoxes.msg DoorPose.msg DoorPoses.msg)
 
 generate_messages(
@@ -67,3 +68,6 @@ target_link_libraries(disinfection_module ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
 add_executable(odom_tf src/odom_tf.cpp)
 target_link_libraries(odom_tf ${catkin_LIBRARIES})
+
+add_executable(disinfection_srv src/disinfection_srv.cpp)
+target_link_libraries(disinfection_srv ${catkin_LIBRARIES} ${OpenCV_LIBS})

@@ -7,6 +7,7 @@
 
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/PoseArray.h>
+#include <geometry_msgs/Twist.h>
 
 #include <tf2_ros/transform_listener.h>
 
@@ -28,6 +29,8 @@
 
 #include <iostream>
 #include <vector>
+
+#include <door_angle/SrvDisinfect.h>
 
 std::vector<door_angle::DoorPose> vecDoor;
 /*
@@ -81,26 +84,27 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "disinfection_module");
   ros::NodeHandle nh;
 
+  // Action Server
   MoveBaseClient ac("move_base", true);
-
   while(!ac.waitForServer(ros::Duration(5.0))){
     ROS_INFO("Waiting for the move_base action server to come up");
   }
 
-  ros::Publisher robot_pose_arr_pub    = nh.advertise<geometry_msgs::PoseArray>("/robot_pose_array", 10);
-  //ros::Publisher move_base_goal_pub    = nh.advertise<move_base_msgs::MoveBaseActionGoal>("/move_base/goal", 10);
-  //ros::Publisher move_base_cancel_pub  = nh.advertise<actionlib_msgs::GoalID>("/move_base/cancel",10);
+  // Publisher
+  ros::Publisher robot_pose_arr_pub  = nh.advertise<geometry_msgs::PoseArray>("/robot_pose_array", 10);
+  ros::Publisher vel_pub             = nh.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
 
+  // Subscriber
   ros::Subscriber robot_status_sub = nh.subscribe("/move_base/status", 10, statusCallback);
   ros::Subscriber umbot_mode_sub = nh.subscribe("/umbot_mode", 10, modeCallback);
 
+  // Service Client
+  ros::ServiceClient clDisinfect = nh.serviceClient<door_angle::SrvDisinfect>("Disinfect_service");
+
+  // read obj
   std::string pkg_path = ros::package::getPath("door_angle");
   std::string filePath = pkg_path + "/obj/door.yaml";
   std::cout << filePath << std::endl;
-
-  //cv::FileStorage fsSettings(filePath, cv::FileStorage::READ);
-  //std::cout << fsSettings.isOpened() << std::endl;
-
   while(true){
 
     std::string cnt = "door" + std::to_string(vecDoor.size()+1);
@@ -181,7 +185,7 @@ int main(int argc, char **argv)
 
     double dCenterX = (x1 + x2) * 0.5;
     double dCenterY = (y1 + y2) * 0.5;
-    double dDistDoor = 0.5;
+    double dDistDoor = 0.9;
 
     robotPose.pose.position.x = dCenterX - std::cos(robotAngle) * dDistDoor;
     robotPose.pose.position.y = dCenterY - std::sin(robotAngle) * dDistDoor;
@@ -208,6 +212,9 @@ int main(int argc, char **argv)
   bool bStopFlag = true;  //true when robot stop
   std::vector<int> vecPath;
 
+  float fPrevError = 0.0;
+  float fPgain = 0.1f;
+  float fDgain = 0.01f;
   while (ros::ok())
   {
     //std::cout << strMode << "\n";
@@ -365,7 +372,7 @@ int main(int argc, char **argv)
 
 
       if(!vecPath.empty()){
-        nDisinfStatus = 1; // Debug code => later assign '1' after receive disinfection complete signal
+        //nDisinfStatus = 1; // Debug code => later assign '1' after receive disinfection complete signal
         if((nRobotStatus == 7 || nRobotStatus == 2 || nRobotStatus == 4 || nRobotStatus == -1 || nRobotStatus == 3)
            && bGoalFlag && nDisinfStatus == 1){ // Robot Reached to Goal & Disinfected
           // loop style !
@@ -393,7 +400,32 @@ int main(int argc, char **argv)
         }
         else if(nRobotStatus == 3 && bGoalFlag && nDisinfStatus == 0){ // Robot Reached to Goal & not Disinfected
           std::cout << "Disinfecting" << "\n";
+          door_angle::SrvDisinfect srv;
+          srv.request.call = true;
+          if(clDisinfect.call(srv)){
+            float fError = static_cast<float>(srv.response.error);
+            float fDist  = static_cast<float>(srv.response.dist_door);
+            float fErrorThresh = 0.3f;
+            if(fError < fErrorThresh){
+              std::cout << "Disinfection Complete!!" << "\n";
+              nDisinfStatus = 1;
+            }
+            else{
+              std::cout << "Disinfecting!!!!" << "\n";
+              geometry_msgs::Twist msgVel;
+              msgVel.linear.x = 0.0;
+              msgVel.linear.y = static_cast<double>(fError * fPgain + (fError - fPrevError) * fDgain);
+              msgVel.linear.z = 0.0;
+              msgVel.angular.x = 0.0;
+              msgVel.angular.y = 0.0;
+              msgVel.angular.z = 0.0;
+              fPrevError = fError;
+              nDisinfStatus = 0;
+            }
+
+          }
           // add fine control? or not?
+
         }
         else if(nRobotStatus == 1){ // Robot is moving to door
           bGoalFlag = true;

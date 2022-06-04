@@ -2,8 +2,10 @@
 image_topic: /d435/color/image_raw
 # Bounding Boxes array topic
 bounding_topic: /bounding_box_array
+prob_thresh: "0.6"
 # Lidar scan topic
 scan_topic: /scan
+min_dist: "0.3"
 # camera intrinsic
 fx: "462.1379699707031"
 fy: "462.1379699707031"

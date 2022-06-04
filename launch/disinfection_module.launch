@@ -1,8 +1,13 @@
 <launch>
     <arg name="object" default="door.yaml"/>
+    <arg name="config" default="config.yaml"/>
 
     <rosparam command="load" file="$(find door_angle)/obj/$(arg object)" />
+    <rosparam command="load" file="$(find door_angle)/config/$(arg config)" />
 
     <node pkg="door_angle" type="disinfection_module" name="disinfection_module" output="screen">
+    </node>
+
+    <node pkg="door_angle" type="disinfection_srv" name="disinfection_srv" output="screen">
     </node>
 </launch>

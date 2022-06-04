@@ -353,7 +353,7 @@ int main(int argc, char **argv)
         double diff_angle = static_cast<double>(scan.angle_increment);
 
 
-        // image lidar fusion
+        // image lidar combine
         for(unsigned long i = 0; i < scan.ranges.size(); i++){
           if(static_cast<double>(scan.ranges[i]) < 0.3) continue;
           double angle = min_angle + diff_angle * i;
