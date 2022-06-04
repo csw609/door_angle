@@ -11,7 +11,7 @@
 #include "door_angle/BoundingBox.h"
 #include "door_angle/BoundingBoxes.h"
 
-std::stack<sensor_msgs::ImageConstPtr>         image_buf;
+//std::stack<sensor_msgs::ImageConstPtr>         image_buf;
 std::stack<sensor_msgs::LaserScanConstPtr>     scan_buf;
 std::stack<door_angle::BoundingBoxesPtr>       bounding_buf;
 
@@ -25,16 +25,16 @@ double dFx;
 
 double dLaserCameraDist = 0.225;
 
-void imgCallback(const sensor_msgs::ImageConstPtr &image)
-{
-  if(image_buf.size() > 20){
-    while(!image_buf.empty()){
-      image_buf.pop();
-    }
-  }
+//void imgCallback(const sensor_msgs::ImageConstPtr &image)
+//{
+//  if(image_buf.size() > 20){
+//    while(!image_buf.empty()){
+//      image_buf.pop();
+//    }
+//  }
 
-  image_buf.push(image);
-}
+//  image_buf.push(image);
+//}
 
 void scanCallback(const sensor_msgs::LaserScanConstPtr &scan)
 {
@@ -63,10 +63,10 @@ void boundCallback(const door_angle::BoundingBoxesPtr &boxes)
 bool disinfect(door_angle::SrvDisinfect::Request  &req,
                door_angle::SrvDisinfect::Response &res)
 {
-  if(!scan_buf.empty() && !image_buf.empty() && !bounding_buf.empty()){
+  if(!scan_buf.empty() && !bounding_buf.empty()){
     // Read last data
     sensor_msgs::LaserScan msgScan = (*scan_buf.top());
-    sensor_msgs::Image msgImage = (*image_buf.top());
+    //sensor_msgs::Image msgImage = (*image_buf.top());
     door_angle::BoundingBoxes msgBoxes = (*bounding_buf.top());
 
 
@@ -74,9 +74,9 @@ bool disinfect(door_angle::SrvDisinfect::Request  &req,
     while(!scan_buf.empty()){
       scan_buf.pop();
     }
-    while(!image_buf.empty()){
-      image_buf.pop();
-    }
+//    while(!image_buf.empty()){
+//      image_buf.pop();
+//    }
     while(!bounding_buf.empty()){
       bounding_buf.pop();
     }
@@ -181,7 +181,7 @@ int main(int argc, char **argv)
   // read parameter
   std::string image_topic, bounding_topic, scan_topic;
   std::string fx,fy,cx,cy, sync_tol, ransac_iter, ransac_thr, minDist, probThresh;
-  nh.param<std::string>("image_topic",image_topic,"/camera/color/image_raw");
+  //nh.param<std::string>("image_topic",image_topic,"/camera/color/image_raw");
   nh.param<std::string>("bounding_topic",bounding_topic,"/bounding_box_array");
   nh.param<std::string>("scan_topic",scan_topic,"/scan");
 
@@ -222,7 +222,7 @@ int main(int argc, char **argv)
   ROS_INFO("Ready to Disinfection Server");
 
   // subscriber
-  ros::Subscriber image_sub = nh.subscribe(image_topic, 10, imgCallback);
+  //ros::Subscriber image_sub = nh.subscribe(image_topic, 10, imgCallback);
   ros::Subscriber bouding_box_sub = nh.subscribe(bounding_topic,10, boundCallback);
   ros::Subscriber scan_sub = nh.subscribe(scan_topic, 10, scanCallback);
 
