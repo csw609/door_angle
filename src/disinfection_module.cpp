@@ -54,7 +54,7 @@ uint8 LOST            = 9   # An action client can determine that a goal is LOST
                             #    sent over the wire by an action server
 */
 int nRobotStatus = -2;
-int nDisinfStatus = 0;
+int nDisinfStatus = 1;
 std::string strMode = "nothing";
 
 void statusCallback(const actionlib_msgs::GoalStatusArrayPtr &status)
@@ -403,6 +403,7 @@ int main(int argc, char **argv)
           door_angle::SrvDisinfect srv;
           srv.request.call = true;
           if(clDisinfect.call(srv)){
+            ROS_INFO("Service Call Sucess");
             float fError = static_cast<float>(srv.response.error);
             float fDist  = static_cast<float>(srv.response.dist_door);
             float fErrorThresh = 0.3f;
@@ -425,6 +426,9 @@ int main(int argc, char **argv)
               ROS_INFO("YError : %lf", dYError);
             }
 
+          }
+          else{
+            ROS_INFO("Service Call Failed");
           }
           // add fine control? or not?
 

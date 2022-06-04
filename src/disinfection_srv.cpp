@@ -167,7 +167,7 @@ bool disinfect(door_angle::SrvDisinfect::Request  &req,
 
 
 
-
+  ROS_INFO("response fail");
   return false;
 }
 
