@@ -212,13 +212,18 @@ int main(int argc, char **argv)
   bool bStopFlag = true;  //true when robot stop
   std::vector<int> vecPath;
 
-  float fPrevError = 0.0;
+  float fPrevYError = 0.0f;
+  float fPrevXError = 0.0f;
   float fPgain = 0.1f;
   float fDgain = 0.01f;
+  float fYError = 0.0f;
+  float fXError  = 0.0f;
+  geometry_msgs::Twist msgVel;
+  msgVel.linear.x  = 0.0; msgVel.linear.y  = 0.0; msgVel.linear.z  = 0.0;
+  msgVel.angular.x = 0.0; msgVel.angular.y = 0.0; msgVel.angular.z = 0.0;
   while (ros::ok())
   {
     //std::cout << strMode << "\n";
-
     if(strMode == "disinfection"){
       bStopFlag = false;
       //std::cout << "disinfection ON" << "\n";
@@ -400,36 +405,43 @@ int main(int argc, char **argv)
         }
         else if(nRobotStatus == 3 && bGoalFlag && nDisinfStatus == 0){ // Robot Reached to Goal & not Disinfected
           std::cout << "Disinfecting" << "\n";
+
           door_angle::SrvDisinfect srv;
           srv.request.call = true;
           if(clDisinfect.call(srv)){
             ROS_INFO("Service Call Sucess");
-            float fError = static_cast<float>(srv.response.error);
-            float fDist  = static_cast<float>(srv.response.dist_door);
+            fYError = static_cast<float>(srv.response.YError);
+            fXError  = static_cast<float>(srv.response.XError);
             float fErrorThresh = 0.3f;
-            if(fError < fErrorThresh){
+            if(fYError < fErrorThresh){
               std::cout << "Disinfection Complete!!" << "\n";
               nDisinfStatus = 1;
             }
             else{
               std::cout << "Disinfecting!!!!" << "\n";
-              geometry_msgs::Twist msgVel;
-              double dYError   = static_cast<double>(fError * fPgain + (fError - fPrevError) * fDgain);
+
+              double dYVel    = static_cast<double>(fYError * fPgain + (fYError - fPrevYError) * fDgain);
+
+              double dXVel = static_cast<double>( fXError  * fPgain + (fXError - fPrevXError) * fDgain);
               msgVel.linear.x  = 0.0;
-              msgVel.linear.y  = dYError;
+              msgVel.linear.y  = dYVel;
               msgVel.linear.z  = 0.0;
               msgVel.angular.x = 0.0;
               msgVel.angular.y = 0.0;
               msgVel.angular.z = 0.0;
-              fPrevError       = fError;
+              fPrevYError       = fYError;
+              fPrevXError      = fXError;
               nDisinfStatus = 0;
-              ROS_INFO("YError : %lf", dYError);
+              ROS_INFO("YError : %lf", static_cast<double>(fYError));
+              ROS_INFO("XError : %lf", static_cast<double>(fXError));
             }
 
           }
           else{
             ROS_INFO("Service Call Failed");
           }
+
+          vel_pub.publish(msgVel);
           // add fine control? or not?
 
         }

@@ -157,8 +157,9 @@ bool disinfect(door_angle::SrvDisinfect::Request  &req,
 
     double dHandleYLaser         =  - std::tan(dHandleAngleFromXAxis) * dDistDoorCamera; // ( - ) camera  -X Axis  == laser Y Axis
 
-    res.error = static_cast<float>(dHandleYLaser);
-    res.error = static_cast<float>(dDistFromDoor);
+    res.YError = static_cast<float>(dHandleYLaser);
+    float fDist2Door = 0.3f;
+    res.XError = static_cast<float>(dDistFromDoor - fDist2Door);
 
 
     return true;
