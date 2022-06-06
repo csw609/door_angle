@@ -413,9 +413,12 @@ int main(int argc, char **argv)
             fYError = static_cast<float>(srv.response.YError);
             fXError  = static_cast<float>(srv.response.XError);
             float fErrorThresh = 0.05f;
+            ROS_INFO("YError : %lf", static_cast<double>(fYError));
+            ROS_INFO("XError : %lf", static_cast<double>(fXError));
             if(fYError < fErrorThresh){
               std::cout << "Disinfection Complete!!" << "\n";
               nDisinfStatus = 1;
+              // Add check and wait
             }
             else{
               std::cout << "Disinfecting!!!!" << "\n";
@@ -432,8 +435,6 @@ int main(int argc, char **argv)
               fPrevYError       = fYError;
               fPrevXError      = fXError;
               nDisinfStatus = 0;
-              ROS_INFO("YError : %lf", static_cast<double>(fYError));
-              ROS_INFO("XError : %lf", static_cast<double>(fXError));
             }
 
           }
