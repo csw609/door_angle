@@ -214,7 +214,7 @@ int main(int argc, char **argv)
 
   float fPrevYError = 0.0f;
   float fPrevXError = 0.0f;
-  float fPgain = 0.1f;
+  float fPgain = 0.2f;
   float fDgain = 0.01f;
   float fYError = 0.0f;
   float fXError  = 0.0f;
@@ -412,7 +412,7 @@ int main(int argc, char **argv)
             ROS_INFO("Service Call Sucess");
             fYError = static_cast<float>(srv.response.YError);
             fXError  = static_cast<float>(srv.response.XError);
-            float fErrorThresh = 0.3f;
+            float fErrorThresh = 0.05f;
             if(fYError < fErrorThresh){
               std::cout << "Disinfection Complete!!" << "\n";
               nDisinfStatus = 1;

@@ -152,10 +152,12 @@ bool disinfect(door_angle::SrvDisinfect::Request  &req,
       return false;
     }
 
-    double dHandleAngleFromXAxis = std::atan2(dFx ,(dMinHandleX - dCx));
+    double dHandleAngleFromXAxis = std::atan2(dFx ,(dMinHandleX - dCx)) - 1.57079632675;
     double dDistDoorCamera       = dDistFromDoor - dLaserCameraDist;
-
-    double dHandleYLaser         =  - std::tan(dHandleAngleFromXAxis) * dDistDoorCamera; // ( - ) camera  -X Axis  == laser Y Axis
+    ROS_INFO("HandleX : %lf", dMinHandleX);
+    ROS_INFO("angle : %lf", dHandleAngleFromXAxis);
+    ROS_INFO("Dist : %lf", dDistFromDoor);
+    double dHandleYLaser         =  std::tan(dHandleAngleFromXAxis) * dDistDoorCamera; // ( - ) camera  -X Axis  == laser Y Axis
 
     res.YError = static_cast<float>(dHandleYLaser);
     float fDist2Door = 0.3f;
