@@ -144,12 +144,16 @@ bool disinfect(door_angle::SrvDisinfect::Request  &req,
       }
     }
 
+    float fDist2Door = 0.50f;
+    //nHandleCount = 0; //debug code
     if(nHandleCount > 0){
       dMinHandleX = dMinHandleX / static_cast<double>(nHandleCount);
     }
     else{
       ROS_INFO("Handle doesn't detected!!");
-      return false;
+      res.YError = 123123.123f;
+      res.XError = static_cast<float>(dDistFromDoor - static_cast<double>(fDist2Door));
+      return true;
     }
 
     double dHandleAngleFromXAxis = std::atan2(dFx ,(dMinHandleX - dCx)) - 1.57079632675;
@@ -160,15 +164,13 @@ bool disinfect(door_angle::SrvDisinfect::Request  &req,
     double dHandleYLaser         =  std::tan(dHandleAngleFromXAxis) * dDistDoorCamera; // ( - ) camera  -X Axis  == laser Y Axis
 
     res.YError = static_cast<float>(dHandleYLaser);
-    float fDist2Door = 0.3f;
-    res.XError = static_cast<float>(dDistFromDoor - fDist2Door);
+
+    res.XError = static_cast<float>(dDistFromDoor - static_cast<double>(fDist2Door));
 
 
     return true;
 
   }
-
-
 
   ROS_INFO("response fail");
   return false;

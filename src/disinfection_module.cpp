@@ -408,49 +408,88 @@ int main(int argc, char **argv)
           nPathCnt = (nPathCnt + 1) % vecPathSize;
         }
         else if(nRobotStatus == 3 && bGoalFlag && nDisinfStatus == 0){ // Robot Reached to Goal & not Disinfected
-          std::cout << "Disinfecting" << "\n";
+          ROS_INFO("Disinfecting");
 
           door_angle::SrvDisinfect srv;
           srv.request.call = true;
+
           if(clDisinfect.call(srv)){
-            ROS_INFO("Service Call Sucess");
+
             fYError = static_cast<float>(srv.response.YError);
             fXError  = static_cast<float>(srv.response.XError);
-            float fErrorThresh = 0.05f;
+
+            ROS_INFO("Service Call Sucess");
             ROS_INFO("YError : %lf", static_cast<double>(fYError));
             ROS_INFO("XError : %lf", static_cast<double>(fXError));
-            if(std::abs(fYError) < fErrorThresh){
-              nDisinfectCnt++;
-              ROS_INFO("Disinfection Count : %d", nDisinfectCnt);
-              if(nDisinfectCnt > 10){
-                std::cout << "Disinfection Complete!!" << "\n";
-                nDisinfStatus = 1;
 
-                // sleep for time
-                unsigned int unSleepSec = 5; // seconds
-                sleep(unSleepSec);
+            if(nDisinfectCnt > 30){
+              ROS_INFO("Disinfection Complete!!");
+              ROS_INFO("Disinfection Complete!!");
 
-                nDisinfectCnt = 0;
-              }
-
-              // Add check and wait
-            }
-            else{
-              std::cout << "Disinfecting!!!!" << "\n";
-
-              double dYVel    = static_cast<double>(fYError * fPgain + (fYError - fPrevYError) * fDgain);
-
-              double dXVel = static_cast<double>( fXError  * fPgain + (fXError - fPrevXError) * fDgain);
               msgVel.linear.x  = 0.0;
-              msgVel.linear.y  = dYVel;
+              msgVel.linear.y  = 0.0;
               msgVel.linear.z  = 0.0;
               msgVel.angular.x = 0.0;
               msgVel.angular.y = 0.0;
               msgVel.angular.z = 0.0;
-              fPrevYError       = fYError;
-              fPrevXError      = fXError;
-              nDisinfStatus = 0;
 
+              vel_pub.publish(msgVel);
+              nDisinfStatus = 1;
+
+              // sleep for time
+              unsigned int unSleepSec = 7; // seconds
+              sleep(unSleepSec);
+
+              nDisinfectCnt = 0;
+            }
+            else{
+              ROS_INFO("Disinfecting!!!!");
+              bool bXAlign = false;
+              bool bYAlign = false; //service modify
+              float fErrorThresh = 0.02f; // (m)
+
+              if(std::abs(fYError) > fErrorThresh && std::abs(fYError) < 100000.0f ){
+                ROS_INFO("Y Align!!!!");
+                double dYVel    = static_cast<double>(fYError * fPgain + (fYError - fPrevYError) * fDgain);
+
+                msgVel.linear.x  = 0.0;
+                msgVel.linear.y  = dYVel;
+                msgVel.linear.z  = 0.0;
+                msgVel.angular.x = 0.0;
+                msgVel.angular.y = 0.0;
+                msgVel.angular.z = 0.0;
+
+                fPrevYError      = fYError;
+              }
+              else{
+                ROS_INFO("Y Align Complete!!!!");
+                bYAlign = true;
+              }
+
+              if(std::abs(fXError) > fErrorThresh && bYAlign){
+                ROS_INFO("X Align!!!!");
+                double dXVel = static_cast<double>(fXError  * fPgain + (fXError - fPrevXError) * fDgain);
+
+                msgVel.linear.x  = dXVel;
+                msgVel.linear.y  = 0.0;
+                msgVel.linear.z  = 0.0;
+                msgVel.angular.x = 0.0;
+                msgVel.angular.y = 0.0;
+                msgVel.angular.z = 0.0;
+
+                fPrevXError      = fXError;
+
+              }
+              else if(std::abs(fXError) < fErrorThresh && bYAlign){
+                bXAlign = true;
+                ROS_INFO("X Align Complete!!!!");
+              }
+
+              nDisinfStatus = 0;
+              if(bXAlign && bYAlign){
+                ROS_INFO("Disinfection Count : %d", nDisinfectCnt);
+                nDisinfectCnt++;
+              }
             }
 
             // sleep for time
@@ -473,10 +512,9 @@ int main(int argc, char **argv)
       }
     }
     else if(!bStopFlag && strMode != "stop"){
-
-      std::cout << "Disinfection Mode Off!" << std::endl;
-      std::cout << "Mode Changed!" << std::endl;
-      std::cout << "Robot Stop!" << std::endl;
+      ROS_INFO("Disinfection Mode Off!");
+      ROS_INFO("Mode Changed!");
+      ROS_INFO("Robot Stop!");
       //      actionlib_msgs::GoalID cancle;
       //      cancle.id = std::to_string(nPathCnt-1);
       //      move_base_cancel_pub.publish(cancle);
@@ -493,15 +531,14 @@ int main(int argc, char **argv)
       //continue;
     }
     else if(!bStopFlag && strMode == "stop"){
-      std::cout << "Disinfection Mode Off!" << std::endl;
-      std::cout << "Robot Stop!" << std::endl;
+      ROS_INFO("Disinfection Mode Off!");
+      ROS_INFO("Robot Stop!");
       ac.cancelGoal();
       int vecPathSize = static_cast<int>(vecPath.size());
       nPathCnt = ((nPathCnt - 1) + vecPathSize) % vecPathSize;
       bStopFlag = true;
+      ROS_INFO("Robot Status : %d", nRobotStatus);
     }
-
-
 
     robot_pose_arr_pub.publish(robotPoseArr);
     ros::spinOnce();
