@@ -419,7 +419,7 @@ int main(int argc, char **argv)
             float fErrorThresh = 0.05f;
             ROS_INFO("YError : %lf", static_cast<double>(fYError));
             ROS_INFO("XError : %lf", static_cast<double>(fXError));
-            if(fYError < fErrorThresh){
+            if(std::abs(fYError) < fErrorThresh){
               nDisinfectCnt++;
               ROS_INFO("Disinfection Count : %d", nDisinfectCnt);
               if(nDisinfectCnt > 10){
