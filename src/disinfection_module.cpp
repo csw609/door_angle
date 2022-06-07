@@ -450,10 +450,12 @@ int main(int argc, char **argv)
               fPrevYError       = fYError;
               fPrevXError      = fXError;
               nDisinfStatus = 0;
-              // sleep for time
-              unsigned int unSleepMicro = 100000; // microseconds (0.1 seconds)
-              usleep(unSleepMicro);
+
             }
+
+            // sleep for time
+            unsigned int unSleepMicro = 100000; // microseconds (0.1 seconds)
+            usleep(unSleepMicro);
 
           }
           else{
