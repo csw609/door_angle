@@ -8,6 +8,7 @@
 #include "door_angle/BoundingBox.h"
 #include "door_angle/BoundingBoxes.h"
 
+
 std::queue<sensor_msgs::ImageConstPtr>  image_buf;
 
 void imgCallback(const sensor_msgs::ImageConstPtr &image)
@@ -51,8 +52,9 @@ int main(int argc, char **argv)
       ROS_INFO("pub fake bounding");
     }
 
-    ros::spinOnce();
 
+
+    ros::spinOnce();
     loop_rate.sleep();
   }
 

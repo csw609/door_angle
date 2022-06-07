@@ -32,6 +32,8 @@
 
 #include <door_angle/SrvDisinfect.h>
 
+#include <unistd.h>
+
 std::vector<door_angle::DoorPose> vecDoor;
 /*
 uint8 status
@@ -216,11 +218,13 @@ int main(int argc, char **argv)
   float fPrevXError = 0.0f;
   float fPgain = 0.2f;
   float fDgain = 0.01f;
-  float fYError = 0.0f;
+  float fYError  = 0.0f;
   float fXError  = 0.0f;
+  int   nDisinfectCnt = 0;
   geometry_msgs::Twist msgVel;
   msgVel.linear.x  = 0.0; msgVel.linear.y  = 0.0; msgVel.linear.z  = 0.0;
   msgVel.angular.x = 0.0; msgVel.angular.y = 0.0; msgVel.angular.z = 0.0;
+
   while (ros::ok())
   {
     //std::cout << strMode << "\n";
@@ -416,8 +420,19 @@ int main(int argc, char **argv)
             ROS_INFO("YError : %lf", static_cast<double>(fYError));
             ROS_INFO("XError : %lf", static_cast<double>(fXError));
             if(fYError < fErrorThresh){
-              std::cout << "Disinfection Complete!!" << "\n";
-              nDisinfStatus = 1;
+              nDisinfectCnt++;
+              ROS_INFO("Disinfection Count : %d", nDisinfectCnt);
+              if(nDisinfectCnt > 10){
+                std::cout << "Disinfection Complete!!" << "\n";
+                nDisinfStatus = 1;
+
+                // sleep for time
+                unsigned int unSleepSec = 5; // seconds
+                sleep(unSleepSec);
+
+                nDisinfectCnt = 0;
+              }
+
               // Add check and wait
             }
             else{
@@ -435,6 +450,9 @@ int main(int argc, char **argv)
               fPrevYError       = fYError;
               fPrevXError      = fXError;
               nDisinfStatus = 0;
+              // sleep for time
+              unsigned int unSleepMicro = 100000; // microseconds (0.1 seconds)
+              usleep(unSleepMicro);
             }
 
           }
