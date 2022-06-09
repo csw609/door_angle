@@ -1,5 +1,7 @@
 #include <queue>
 #include <stack>
+#include <vector>
+#include <algorithm>
 
 #include "ros/ros.h"
 #include "sensor_msgs/Image.h"
@@ -89,7 +91,7 @@ bool disinfect(door_angle::SrvDisinfect::Request  &req,
 
       // Convert scan data msgScan => std::vector<Eigen::Vector4d>
     unsigned long nScanSize = msgScan.ranges.size();
-    double dDistFromDoor = 0.0;
+    std::vector<double> vecDistFromDoor;
     int    nDistFromDoorCnt = 0;
     for(unsigned long i =0; i < nScanSize; i++){
       if( static_cast<double>(msgScan.ranges[i]) < dMinDist) continue; // too close scan data assumed as robot frame so throw them
@@ -99,9 +101,15 @@ bool disinfect(door_angle::SrvDisinfect::Request  &req,
       //if(dAngle < -1.57079632675 || dAngle > 1.57079632675) continue; // throw half of scan from -x axis side
 
       //scan points for measure distance from door
-      if(dAngle < 0.0872665 && dAngle > - 0.0872665){   // +- 5 Deg
-        dDistFromDoor += std::cos(dAngle) * static_cast<double>(msgScan.ranges[i]);
-        nDistFromDoorCnt++;
+      if(dAngle < 0.436332 && dAngle > - 0.436332){   // +- 25 Deg
+
+        double dDist;
+        dDist = std::cos(dAngle) * static_cast<double>(msgScan.ranges[i]);
+        vecDistFromDoor.push_back(dDist);
+        ROS_INFO("dist : %lf", dDist);
+
+
+        //nDistFromDoorCnt++;
       }
 
       //ranges to 4d
@@ -114,8 +122,36 @@ bool disinfect(door_angle::SrvDisinfect::Request  &req,
       //vecScanPoints.push_back(vScanPoint);
     }
 
-    if(nDistFromDoorCnt > 0){
-      dDistFromDoor = dDistFromDoor / nDistFromDoorCnt;
+    sort(vecDistFromDoor.begin(), vecDistFromDoor.end());
+
+    int nQ1Idx = static_cast<int>(vecDistFromDoor.size()) / 4;
+    int nQ3Idx = static_cast<int>(vecDistFromDoor.size()) / 4 * 3;
+
+    double dQ1 = vecDistFromDoor[static_cast<unsigned long >(nQ1Idx)];
+    double dQ3 = vecDistFromDoor[static_cast<unsigned long >(nQ3Idx)];
+    double dIQR = dQ3 - dQ1;
+
+    double dOutStep = 1.5 * dIQR;
+
+    double dLowerBound = dQ1 - dOutStep;
+    double dUpperBound = dQ3 + dOutStep;
+
+    unsigned long ulVecSize = vecDistFromDoor.size();
+
+    double dDistSum = 0.0;
+    int    nDistCnt = 0;
+    for(unsigned long i = 0; i < ulVecSize; i++){
+      if(vecDistFromDoor[i] < dUpperBound && vecDistFromDoor[i] > dLowerBound){
+        ROS_INFO("dist inlier : %lf", vecDistFromDoor[i]);
+        dDistSum += vecDistFromDoor[i];
+        nDistCnt++;
+      }
+    }
+    ROS_INFO("dist sum : %lf ", dDistSum);
+
+    double dDistFromDoor;
+    if(nDistCnt > 0){
+      dDistFromDoor = dDistSum / static_cast<double>(nDistCnt);
     }
     else{
       ROS_INFO("Measure Distance Fail!!!!!");
@@ -144,7 +180,7 @@ bool disinfect(door_angle::SrvDisinfect::Request  &req,
       }
     }
 
-    float fDist2Door = 0.50f;
+    float fDist2Door = 0.40f;
     //nHandleCount = 0; //debug code
     if(nHandleCount > 0){
       dMinHandleX = dMinHandleX / static_cast<double>(nHandleCount);
@@ -167,7 +203,7 @@ bool disinfect(door_angle::SrvDisinfect::Request  &req,
 
     res.XError = static_cast<float>(dDistFromDoor - static_cast<double>(fDist2Door));
 
-
+    // float double check!!!!!!!!!!!!!!!!!!
     return true;
 
   }
@@ -197,7 +233,7 @@ int main(int argc, char **argv)
   nh.param<std::string>("sync_tolerance",sync_tol,"0.1");
   nh.param<std::string>("ransac_iteration",ransac_iter,"60");
   nh.param<std::string>("ransac_thershold",ransac_thr,"0.1");
-  nh.param<std::string>("min_Dist", minDist, "0.3");
+  nh.param<std::string>("min_Dist", minDist, "0.35");
   nh.param<std::string>("prob_thresh", probThresh, "0.6");
 
 

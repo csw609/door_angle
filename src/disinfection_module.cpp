@@ -437,7 +437,7 @@ int main(int argc, char **argv)
               nDisinfStatus = 1;
 
               // sleep
-              unsigned int unSleepSec = 7; // seconds
+              unsigned int unSleepSec = 4; // seconds
               sleep(unSleepSec);
 
               nDisinfectCnt = 0;
