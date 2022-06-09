@@ -463,6 +463,7 @@ int main(int argc, char **argv)
               }
               else{
                 ROS_INFO("Y Align Complete!!!!");
+
                 bYAlign = true;
               }
 
