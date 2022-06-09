@@ -436,7 +436,7 @@ int main(int argc, char **argv)
               vel_pub.publish(msgVel);
               nDisinfStatus = 1;
 
-              // sleep for time
+              // sleep
               unsigned int unSleepSec = 7; // seconds
               sleep(unSleepSec);
 
@@ -492,7 +492,7 @@ int main(int argc, char **argv)
               }
             }
 
-            // sleep for time
+            // sleep
             unsigned int unSleepMicro = 100000; // microseconds (0.1 seconds)
             usleep(unSleepMicro);
 
