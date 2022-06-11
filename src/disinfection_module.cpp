@@ -381,6 +381,7 @@ int main(int argc, char **argv)
 
 
       if(!vecPath.empty()){
+        ROS_INFO("Robot status : %d", nRobotStatus);
         //nDisinfStatus = 1; // Debug code => later assign '1' after receive disinfection complete signal
         if((nRobotStatus == 7 || nRobotStatus == 2 || nRobotStatus == 4 || nRobotStatus == -1 || nRobotStatus == 3)
            && bGoalFlag && nDisinfStatus == 1){ // Robot Reached to Goal & Disinfected
