@@ -35,6 +35,7 @@
 #include <unistd.h>
 
 std::vector<door_angle::DoorPose> vecDoor;
+
 /*
 uint8 status
 uint8 PENDING         = 0   # The goal has yet to be processed by the action server
