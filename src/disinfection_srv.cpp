@@ -17,8 +17,6 @@
 std::stack<sensor_msgs::LaserScanConstPtr>     scan_buf;
 std::stack<door_angle::BoundingBoxesPtr>       bounding_buf;
 
-
-
 // parameters
 double dMinDist;
 double dProbThresh;
@@ -95,7 +93,7 @@ bool disinfect(door_angle::SrvDisinfect::Request  &req,
     std::vector<double> vecDistFromDoor;
     //int    nDistFromDoorCnt = 0;
     for(unsigned long i =0; i < nScanSize; i++){
-      if( static_cast<double>(msgScan.ranges[i]) < 0.15) continue; // too close scan data assumed as robot frame so throw them
+      if( static_cast<double>(msgScan.ranges[i]) < 0.30) continue; // too close scan data assumed as robot frame so throw them
 
       double dAngle = dMinAngle + dDiffAngle * static_cast<double>(i);
 
