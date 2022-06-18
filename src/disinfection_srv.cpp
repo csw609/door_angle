@@ -39,7 +39,7 @@ double dRefDist2Door;
 
 void scanCallback(const sensor_msgs::LaserScanConstPtr &scan)
 {
-  if(scan_buf.size() > 20){
+  if(scan_buf.size() > 200){
     while(!scan_buf.empty()){
       scan_buf.pop();
     }
@@ -50,7 +50,7 @@ void scanCallback(const sensor_msgs::LaserScanConstPtr &scan)
 
 void boundCallback(const door_angle::BoundingBoxesPtr &boxes)
 {
-  if(bounding_buf.size() > 20){
+  if(bounding_buf.size() > 200){
     while(!bounding_buf.empty()){
       bounding_buf.pop();
     }
