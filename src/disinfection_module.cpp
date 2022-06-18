@@ -233,6 +233,8 @@ int main(int argc, char **argv)
   geometry_msgs::Twist msgVel;
   msgVel.linear.x  = 0.0; msgVel.linear.y  = 0.0; msgVel.linear.z  = 0.0;
   msgVel.angular.x = 0.0; msgVel.angular.y = 0.0; msgVel.angular.z = 0.0;
+  bool bXAlign = false;
+  bool bYAlign = false; //service modify
 
   while (ros::ok())
   {
@@ -432,7 +434,7 @@ int main(int argc, char **argv)
             ROS_INFO("YError : %lf", static_cast<double>(fYError));
             ROS_INFO("XError : %lf", static_cast<double>(fXError));
 
-            if(nDisinfectCnt > 30){
+            if(nDisinfectCnt > 20){
               ROS_INFO("Disinfection Complete!!");
               ROS_INFO("Disinfection Complete!!");
 
@@ -454,16 +456,40 @@ int main(int argc, char **argv)
               msgSpray.data = "spray";
               spray_cmd_pub.publish(msgSpray);
 
-              unSleepSec = 3;
+              unSleepSec = 1;
               sleep(unSleepSec);
 
+              msgVel.linear.x  = -0.15;
+              msgVel.linear.y  = 0.0;
+              msgVel.linear.z  = 0.0;
+              msgVel.angular.x = 0.0;
+              msgVel.angular.y = 0.0;
+              msgVel.angular.z = 0.0;
 
+              vel_pub.publish(msgVel);
+
+              unSleepSec = 1;
+              sleep(unSleepSec);
+
+              msgVel.linear.x  = 0.0;
+              msgVel.linear.y  = 0.0;
+              msgVel.linear.z  = 0.0;
+              msgVel.angular.x = 0.0;
+              msgVel.angular.y = 0.0;
+              msgVel.angular.z = 0.0;
+
+              vel_pub.publish(msgVel);
+
+              unSleepSec = 2;
+              sleep(unSleepSec);
+
+              bYAlign = false;
+              bXAlign = false;
               nDisinfectCnt = 0;
             }
             else{
               ROS_INFO("Disinfecting!!!!");
-              bool bXAlign = false;
-              bool bYAlign = false; //service modify
+
               float fErrorThresh = 0.02f; // (m)
 
               if(std::abs(fYError) > fErrorThresh && std::abs(fYError) < 100000.0f ){
