@@ -86,6 +86,13 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "disinfection_module");
   ros::NodeHandle nh;
 
+  // Parameter
+  std::string strPgain, strDgain;
+  nh.param<std::string>("p_gain",strPgain,"0.2");
+  nh.param<std::string>("d_gain",strDgain,"0.01");
+  ROS_INFO("Pgain : %s", strPgain.c_str());
+  ROS_INFO("Dgain : %s", strDgain.c_str());
+
   // Action Server
   MoveBaseClient ac("move_base", true);
   while(!ac.waitForServer(ros::Duration(5.0))){
@@ -95,6 +102,7 @@ int main(int argc, char **argv)
   // Publisher
   ros::Publisher robot_pose_arr_pub  = nh.advertise<geometry_msgs::PoseArray>("/robot_pose_array", 10);
   ros::Publisher vel_pub             = nh.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
+  ros::Publisher spray_cmd_pub       = nh.advertise<std_msgs::String>("/spray_cmd",10);
 
   // Subscriber
   ros::Subscriber robot_status_sub = nh.subscribe("/move_base/status", 10, statusCallback);
@@ -216,8 +224,8 @@ int main(int argc, char **argv)
 
   float fPrevYError = 0.0f;
   float fPrevXError = 0.0f;
-  float fPgain = 0.2f;
-  float fDgain = 0.01f;
+  float fPgain = std::stof(strPgain);
+  float fDgain = std::stof(strDgain);
   float fYError  = 0.0f;
   float fXError  = 0.0f;
   int   nDisinfectCnt = 0;
@@ -438,8 +446,16 @@ int main(int argc, char **argv)
               nDisinfStatus = 1;
 
               // sleep
-              unsigned int unSleepSec = 4; // seconds
+              unsigned int unSleepSec = 2; // seconds
               sleep(unSleepSec);
+              //spray
+              std_msgs::String msgSpray;
+              msgSpray.data = "spray";
+              spray_cmd_pub.publish(msgSpray);
+
+              unSleepSec = 3;
+              sleep(unSleepSec);
+
 
               nDisinfectCnt = 0;
             }

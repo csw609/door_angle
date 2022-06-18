@@ -26,6 +26,7 @@ double dCx;
 double dFx;
 
 double dLaserCameraDist = 0.225;
+double dRefDist2Door;
 
 //void imgCallback(const sensor_msgs::ImageConstPtr &image)
 //{
@@ -92,9 +93,9 @@ bool disinfect(door_angle::SrvDisinfect::Request  &req,
       // Convert scan data msgScan => std::vector<Eigen::Vector4d>
     unsigned long nScanSize = msgScan.ranges.size();
     std::vector<double> vecDistFromDoor;
-    int    nDistFromDoorCnt = 0;
+    //int    nDistFromDoorCnt = 0;
     for(unsigned long i =0; i < nScanSize; i++){
-      if( static_cast<double>(msgScan.ranges[i]) < dMinDist) continue; // too close scan data assumed as robot frame so throw them
+      if( static_cast<double>(msgScan.ranges[i]) < 0.15) continue; // too close scan data assumed as robot frame so throw them
 
       double dAngle = dMinAngle + dDiffAngle * static_cast<double>(i);
 
@@ -180,7 +181,7 @@ bool disinfect(door_angle::SrvDisinfect::Request  &req,
       }
     }
 
-    float fDist2Door = 0.40f;
+
     //nHandleCount = 0; //debug code
     if(nHandleCount > 0){
       dMinHandleX = dMinHandleX / static_cast<double>(nHandleCount);
@@ -188,7 +189,7 @@ bool disinfect(door_angle::SrvDisinfect::Request  &req,
     else{
       ROS_INFO("Handle doesn't detected!!");
       res.YError = 123123.123f;
-      res.XError = static_cast<float>(dDistFromDoor - static_cast<double>(fDist2Door));
+      res.XError = static_cast<float>(dDistFromDoor - dRefDist2Door);
       return true;
     }
 
@@ -201,7 +202,7 @@ bool disinfect(door_angle::SrvDisinfect::Request  &req,
 
     res.YError = static_cast<float>(dHandleYLaser);
 
-    res.XError = static_cast<float>(dDistFromDoor - static_cast<double>(fDist2Door));
+    res.XError = static_cast<float>(dDistFromDoor - dRefDist2Door);
 
     // float double check!!!!!!!!!!!!!!!!!!
     return true;
@@ -220,8 +221,9 @@ int main(int argc, char **argv)
   ros::NodeHandle nh;
 
   // read parameter
-  std::string image_topic, bounding_topic, scan_topic;
-  std::string fx,fy,cx,cy, sync_tol, ransac_iter, ransac_thr, minDist, probThresh;
+  std::string bounding_topic, scan_topic;
+  std::string fx,fy,cx,cy, minDist, probThresh;
+  std::string dist_door;
   //nh.param<std::string>("image_topic",image_topic,"/camera/color/image_raw");
   nh.param<std::string>("bounding_topic",bounding_topic,"/bounding_box_array");
   nh.param<std::string>("scan_topic",scan_topic,"/scan");
@@ -230,14 +232,10 @@ int main(int argc, char **argv)
   nh.param<std::string>("fy",fy,"462.1379699707031");
   nh.param<std::string>("cx",cx,"320.0");
   nh.param<std::string>("cy",cy,"240.0");
-  nh.param<std::string>("sync_tolerance",sync_tol,"0.1");
-  nh.param<std::string>("ransac_iteration",ransac_iter,"60");
-  nh.param<std::string>("ransac_thershold",ransac_thr,"0.1");
   nh.param<std::string>("min_Dist", minDist, "0.35");
   nh.param<std::string>("prob_thresh", probThresh, "0.6");
+  nh.param<std::string>("dist_door", dist_door, "0.5");
 
-
-  ROS_INFO("image topic : %s", image_topic.c_str());
   ROS_INFO("bounding boxes topic : %s", bounding_topic.c_str());
   ROS_INFO("lidar scan topic: %s", scan_topic.c_str());
 
@@ -246,17 +244,18 @@ int main(int argc, char **argv)
   ROS_INFO("cx : %s", cx.c_str());
   ROS_INFO("cy : %s", cy.c_str());
 
-  ROS_INFO("sync_tolernace : %s", sync_tol.c_str());
-  ROS_INFO("ransac iteration : %s", ransac_iter.c_str());
-  ROS_INFO("ransac threshold : %s", ransac_thr.c_str());
   ROS_INFO("lidar min distance : %s", minDist.c_str());
   ROS_INFO("Probability Threshold : %s", probThresh.c_str());
+
+  ROS_INFO("Distance from door : %s", dist_door.c_str());
 
 
   dFx         = std::stod(fx);
   dCx         = std::stod(cx);
   dMinDist    = std::stod(minDist);
   dProbThresh = std::stod(probThresh);
+
+  dRefDist2Door = std::stod(dist_door);
 
   // service
   ros::ServiceServer service = nh.advertiseService("Disinfect_service", disinfect);

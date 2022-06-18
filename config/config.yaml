@@ -1,18 +1,28 @@
-# image topic
+# Image topic
 image_topic: /camera/color/image_raw
+
 # Bounding Boxes array topic
 bounding_topic: /bounding_box_array
 prob_thresh: "0.3"
+
 # Lidar scan topic
 scan_topic: /scan
-min_dist: "0.35"
-# camera intrinsic
+min_dist: "0.35" #ignore lidar range under min_dist
+
+sync_tolerance: "0.1" # sync tolerance lidar camera
+
+# Camera intrinsic
 fx: "462.1379699707031"
 fy: "462.1379699707031"
 cx: "320.0"
 cy: "240.0"
 
-sync_tolerance: "0.1"
+# RANSAC
 ransac_iteration: "100"
 ransac_threshold: "0.1"
+
+# Disinfection Parameter
+dist_door: "0.4" # (m)
+p_gain: "0.4"
+d_gain: "0.02"
 
