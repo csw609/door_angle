@@ -23,6 +23,6 @@ ransac_threshold: "0.1"
 
 # Disinfection Parameter
 dist_door: "0.45" # (m)
-p_gain: "0.2"
+p_gain: "0.3"
 d_gain: "0.01"
 
